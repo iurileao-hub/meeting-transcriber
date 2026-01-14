@@ -35,6 +35,10 @@ meeting-transcriber/
 ├── .env.example          # Template de configuração
 ├── src/
 │   └── transcribe.py     # Script principal (~600 linhas)
+├── prompts/              # Prompts para Claude Code
+│   ├── README.md         # Instruções de uso
+│   ├── ata_sei.md        # Ata formal (SEI!)
+│   └── resumo_executivo.md  # Resumo + Plano de trabalho
 ├── data/
 │   ├── audio/            # Arquivos de entrada (.wav, .mp3)
 │   ├── transcripts/      # Saídas (.json, .txt, .md)
@@ -89,13 +93,28 @@ pytest tests/ -v
 
 ## Workflow com Claude Code
 
-Após transcrição, usar Claude Code para gerar documentos:
+Após transcrição, usar os prompts padronizados em `prompts/`:
 
+```bash
+# 1. Transcrever (gera .json, .txt, .md)
+python src/transcribe.py data/audio/reuniao.wav
+
+# 2. Usar prompt adequado no Claude Code
 ```
-Leia o arquivo data/transcripts/[nome].json e gere:
-1. Ata da reunião (participantes, pauta, decisões)
-2. Action items com responsáveis
-3. Próximos passos
+
+**Prompts disponíveis:**
+
+| Arquivo | Uso |
+|---------|-----|
+| `prompts/ata_sei.md` | Ata formal para SEI! (padrão institucional) |
+| `prompts/resumo_executivo.md` | Resumo + Plano de trabalho (5W2H/SMART) |
+
+**Exemplo de uso:**
+```
+Leia data/transcripts/reuniao.txt e gere uma ATA DE REUNIÃO formal
+seguindo o padrão institucional brasileiro para o SEI!.
+
+[Cole o prompt completo de prompts/ata_sei.md]
 ```
 
 ---

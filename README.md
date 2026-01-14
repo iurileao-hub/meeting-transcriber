@@ -123,13 +123,28 @@ The JSON file contains detailed data for programmatic processing:
 
 ### Integration with Claude Code
 
-After transcription, use Claude Code to generate meeting minutes:
+After transcription, use the prompts in `prompts/` to generate documents:
 
+```bash
+# 1. Transcribe audio
+python src/transcribe.py data/audio/meeting.wav
+
+# 2. In Claude Code, use one of the prompts:
 ```
-Read the file data/transcripts/meeting.json and generate:
-1. Meeting minutes (participants, agenda, decisions)
-2. Action items with owners
-3. Next steps
+
+**Available prompts:**
+
+| Prompt | Description |
+|--------|-------------|
+| `prompts/ata_sei.md` | Formal meeting minutes for SEI! system |
+| `prompts/resumo_executivo.md` | Executive summary + action plan (5W2H) |
+
+**Example:**
+```
+Read data/transcripts/meeting.txt and generate a formal MEETING MINUTES
+following the Brazilian institutional standard for SEI!.
+
+[Paste the rest of the prompt from prompts/ata_sei.md]
 ```
 
 ### Available Models
@@ -265,13 +280,28 @@ O arquivo JSON contém dados detalhados para processamento programático:
 
 ### Integração com Claude Code
 
-Após a transcrição, use Claude Code para gerar atas:
+Após a transcrição, use os prompts em `prompts/` para gerar documentos:
 
+```bash
+# 1. Transcrever áudio
+python src/transcribe.py data/audio/reuniao.wav
+
+# 2. No Claude Code, use um dos prompts:
 ```
-Leia o arquivo data/transcripts/reuniao.json e gere:
-1. Ata da reunião (participantes, pauta, decisões)
-2. Action items com responsáveis
-3. Próximos passos
+
+**Prompts disponíveis:**
+
+| Prompt | Descrição |
+|--------|-----------|
+| `prompts/ata_sei.md` | Ata formal para sistema SEI! |
+| `prompts/resumo_executivo.md` | Resumo executivo + plano de ação (5W2H) |
+
+**Exemplo:**
+```
+Leia data/transcripts/reuniao.txt e gere uma ATA DE REUNIÃO formal
+seguindo o padrão institucional brasileiro para o SEI!.
+
+[Cole o restante do prompt de prompts/ata_sei.md]
 ```
 
 ### Modelos Disponíveis
