@@ -170,15 +170,15 @@ if __name__ == "__main__":
 
 ---
 
-### Fase 2: CLI + Integração Claude Code (Semana 3)
+### Fase 2: CLI + Integração Claude Code ✅ CONCLUÍDA
 
 **Objetivo:** Interface de linha de comando e workflow com Claude Code.
 
 **Tarefas:**
-1. [ ] Adicionar argparse para CLI
-2. [ ] Opções: modelo, idioma, output format
-3. [ ] Criar template de prompt para atas
-4. [ ] Documentar workflow Claude Code
+1. [x] Adicionar argparse para CLI
+2. [x] Opções: modelo, idioma, output format
+3. [x] Múltiplos formatos de saída (JSON, TXT, MD)
+4. [x] Documentar workflow Claude Code
 5. [ ] Processar primeira reunião real
 
 **CLI esperada:**
@@ -329,8 +329,11 @@ python -c "import whisperx; print('whisperX OK')"
 - [ ] Precisão >85% (avaliação manual em amostra) — pendente teste com reunião real
 
 ### Produção (Fase 2-3)
-- [x] CLI funcional com help
-- [ ] Workflow documentado para Claude Code
+- [x] CLI funcional com help e múltiplos flags
+- [x] Múltiplos formatos de saída (JSON, TXT, MD)
+- [x] Testes unitários implementados (17 testes)
+- [x] Supressão de warnings de bibliotecas externas
+- [x] Workflow documentado para Claude Code
 - [ ] Primeira ata de reunião real gerada
 - [ ] Tempo total (transcrição + ata) < 15min para reunião de 1h
 
@@ -364,6 +367,39 @@ python -c "import whisperx; print('whisperX OK')"
 2. PyTorch 2.6+ `weights_only=True` → patch no torch.load
 3. whisperX API mudou → import de `whisperx.diarize.DiarizationPipeline`
 4. Modelos gated no HuggingFace → aceitar termos de múltiplos modelos
+
+### 14 de Janeiro de 2026 (Tarde) — Fase 2 Concluída
+
+**Melhorias de segurança e robustez:**
+- [x] Refatorado `load_hf_token()` para usar `python-dotenv`
+- [x] Adicionado tratamento de erros em todas as etapas do pipeline
+- [x] Validação de formato de arquivo de áudio
+- [x] Classe `TranscriptionError` customizada com mensagens úteis
+
+**Otimizações de performance:**
+- [x] `compute_type` dinâmico (int8 para CPU, float16 para GPU)
+- [x] `batch_size` adaptativo baseado em modelo e device
+- [x] Liberação de memória com `gc.collect()` após cada modelo
+
+**Novos formatos de saída:**
+- [x] `.txt` — Texto simples com timestamps e speakers
+- [x] `.md` — Markdown formatado para revisão
+- [x] Flag `--format` para escolher (json/txt/md/all)
+
+**Supressão de warnings:**
+- [x] Filtros para warnings de torchaudio, pyannote, pytorch_lightning
+- [x] `SuppressOutput` context manager para prints de bibliotecas externas
+- [x] Flag `--verbose` para debug quando necessário
+
+**Testes unitários:**
+- [x] 17 testes com pytest
+- [x] Cobertura de funções auxiliares e validações
+- [x] Configuração em `pytest.ini`
+
+**Limpeza do projeto:**
+- [x] Removido `venv/bin 2` (artefato de instalação)
+- [x] Removido `tests/__pycache__`
+- [x] Removido `.pytest_cache`
 
 ---
 

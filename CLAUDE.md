@@ -30,16 +30,18 @@ meeting-transcriber/
 ├── PLAN.md               # Roadmap de desenvolvimento
 ├── README.md             # Documentação de uso
 ├── requirements.txt      # Dependências Python
+├── pytest.ini            # Configuração de testes
 ├── .env                  # Configuração (não versionado)
 ├── .env.example          # Template de configuração
 ├── src/
-│   └── transcribe.py     # Script principal
+│   └── transcribe.py     # Script principal (~600 linhas)
 ├── data/
 │   ├── audio/            # Arquivos de entrada (.wav, .mp3)
-│   ├── transcripts/      # JSONs gerados
+│   ├── transcripts/      # Saídas (.json, .txt, .md)
 │   └── outputs/          # Atas e documentos
 └── tests/
-    └── (testes futuros)
+    ├── __init__.py
+    └── test_transcribe.py  # 17 testes unitários
 ```
 
 ---
@@ -50,15 +52,38 @@ meeting-transcriber/
 # Ativar ambiente virtual
 source venv/bin/activate
 
-# Transcrever áudio
+# Transcrever áudio (gera .json, .txt e .md)
 python src/transcribe.py data/audio/reuniao.wav
 
 # Com opções
 python src/transcribe.py audio.wav --model medium --language pt --num-speakers 4
 
+# Apenas texto simples (leitura rápida)
+python src/transcribe.py audio.wav --format txt
+
+# Com logs detalhados (debug)
+python src/transcribe.py audio.wav --verbose
+
 # Ver ajuda
 python src/transcribe.py --help
+
+# Rodar testes
+pytest tests/ -v
 ```
+
+---
+
+## Flags de Execução
+
+| Flag | Descrição | Valores | Padrão |
+|------|-----------|---------|--------|
+| `--model`, `-m` | Modelo Whisper | tiny, base, small, medium, large-v3 | large-v3 |
+| `--language`, `-l` | Idioma | pt, en, es, etc. | auto |
+| `--num-speakers`, `-n` | Nº exato de speakers | inteiro | auto |
+| `--format`, `-f` | Formato de saída | json, txt, md, all | all |
+| `--device`, `-d` | Dispositivo | cpu, cuda, mps | cpu |
+| `--verbose`, `-v` | Logs detalhados | flag | false |
+| `--output`, `-o` | Diretório de saída | path | data/transcripts |
 
 ---
 
@@ -118,8 +143,20 @@ Leia o arquivo data/transcripts/[nome].json e gere:
 ## Problemas Conhecidos
 
 1. **PyTorch 2.6+ weights_only:** O script inclui patch para contornar mudança de segurança
-2. **Warnings de torchaudio:** Deprecation warnings aparecem mas não afetam funcionamento
-3. **Modelos antigos:** Alguns modelos pyannote geram warnings de versão (funcionam normalmente)
+2. **Warnings suprimidos:** Warnings de torchaudio/pyannote são filtrados por padrão (use `--verbose` para ver)
+
+---
+
+## Funcionalidades Implementadas
+
+- ✅ Transcrição com whisperX
+- ✅ Identificação de speakers (diarização)
+- ✅ Múltiplos formatos de saída (JSON, TXT, MD)
+- ✅ Supressão de warnings de bibliotecas externas
+- ✅ Tratamento de erros com mensagens úteis
+- ✅ Otimização de performance (compute_type, batch_size)
+- ✅ Liberação de memória após cada etapa
+- ✅ Testes unitários (17 testes)
 
 ---
 

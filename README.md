@@ -13,7 +13,7 @@ Local meeting transcription system with speaker identification (diarization).
 - Audio transcription in Portuguese and English
 - Automatic speaker identification (diarization)
 - Word-level timestamps with confidence scores
-- Structured JSON output
+- Multiple output formats (JSON, TXT, Markdown)
 - 100% local processing (no cloud APIs)
 
 ### Requirements
@@ -49,7 +49,7 @@ cp .env.example .env
 ### Usage
 
 ```bash
-# Basic transcription
+# Basic transcription (generates .json, .txt, and .md)
 python src/transcribe.py data/audio/meeting.wav
 
 # With options
@@ -58,13 +58,46 @@ python src/transcribe.py meeting.mp3 --model medium --language en
 # Specify number of speakers
 python src/transcribe.py meeting.wav --num-speakers 4
 
+# Choose output format
+python src/transcribe.py meeting.wav --format txt
+
 # Show help
 python src/transcribe.py --help
 ```
 
-### Output
+### Command-Line Options
 
-The script generates a JSON file in `data/transcripts/` with this structure:
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--model` | `-m` | Whisper model size (tiny/base/small/medium/large-v3) | large-v3 |
+| `--language` | `-l` | Language code (en, pt, etc.) or auto-detect | auto |
+| `--num-speakers` | `-n` | Exact number of speakers (if known) | auto |
+| `--min-speakers` | | Minimum expected speakers | - |
+| `--max-speakers` | | Maximum expected speakers | - |
+| `--output` | `-o` | Output directory | data/transcripts |
+| `--format` | `-f` | Output format (json/txt/md/all) | all |
+| `--device` | `-d` | Processing device (cpu/cuda/mps) | cpu |
+| `--verbose` | `-v` | Show detailed logs and warnings | false |
+
+### Output Formats
+
+| Format | Description | Use Case |
+|--------|-------------|----------|
+| `json` | Complete with word-level timestamps | Processing by code/Claude |
+| `txt` | Simple text with speaker labels | Quick reading |
+| `md` | Formatted Markdown | Review/editing |
+| `all` | All formats above (default) | Maximum flexibility |
+
+**Example output (.txt):**
+```
+[00:00] SPEAKER_00: Good morning everyone, let's start the meeting.
+
+[00:05] SPEAKER_01: Thanks for joining. First item on the agenda...
+```
+
+### JSON Structure
+
+The JSON file contains detailed data for programmatic processing:
 
 ```json
 {
@@ -82,6 +115,7 @@ The script generates a JSON file in `data/transcripts/` with this structure:
   "metadata": {
     "source_file": "meeting.wav",
     "language": "en",
+    "model": "large-v3",
     "num_speakers": 3
   }
 }
@@ -121,7 +155,7 @@ Sistema local de transcrição de reuniões com identificação de speakers (dia
 - Transcrição de áudio em português e inglês
 - Identificação automática de speakers (diarização)
 - Timestamps a nível de palavra com scores de confiança
-- Output em JSON estruturado
+- Múltiplos formatos de saída (JSON, TXT, Markdown)
 - Processamento 100% local (sem APIs na nuvem)
 
 ### Requisitos
@@ -157,7 +191,7 @@ cp .env.example .env
 ### Uso
 
 ```bash
-# Transcrição básica
+# Transcrição básica (gera .json, .txt e .md)
 python src/transcribe.py data/audio/reuniao.wav
 
 # Com opções
@@ -166,13 +200,46 @@ python src/transcribe.py reuniao.mp3 --model medium --language pt
 # Especificar número de speakers
 python src/transcribe.py reuniao.wav --num-speakers 4
 
+# Escolher formato de saída
+python src/transcribe.py reuniao.wav --format txt
+
 # Ver ajuda
 python src/transcribe.py --help
 ```
 
-### Output
+### Opções de Linha de Comando
 
-O script gera um arquivo JSON em `data/transcripts/` com esta estrutura:
+| Flag | Curto | Descrição | Padrão |
+|------|-------|-----------|--------|
+| `--model` | `-m` | Tamanho do modelo Whisper (tiny/base/small/medium/large-v3) | large-v3 |
+| `--language` | `-l` | Código do idioma (en, pt, etc.) ou auto-detectar | auto |
+| `--num-speakers` | `-n` | Número exato de speakers (se conhecido) | auto |
+| `--min-speakers` | | Mínimo de speakers esperado | - |
+| `--max-speakers` | | Máximo de speakers esperado | - |
+| `--output` | `-o` | Diretório de saída | data/transcripts |
+| `--format` | `-f` | Formato de saída (json/txt/md/all) | all |
+| `--device` | `-d` | Dispositivo de processamento (cpu/cuda/mps) | cpu |
+| `--verbose` | `-v` | Mostra logs e warnings detalhados | false |
+
+### Formatos de Saída
+
+| Formato | Descrição | Uso |
+|---------|-----------|-----|
+| `json` | Completo com timestamps por palavra | Processamento por código/Claude |
+| `txt` | Texto simples com speakers | Leitura rápida |
+| `md` | Markdown formatado | Revisão/edição |
+| `all` | Todos os formatos acima (padrão) | Máxima flexibilidade |
+
+**Exemplo de saída (.txt):**
+```
+[00:00] SPEAKER_00: Bom dia a todos, vamos começar a reunião.
+
+[00:05] SPEAKER_01: Obrigado pela presença. Primeiro item da pauta...
+```
+
+### Estrutura do JSON
+
+O arquivo JSON contém dados detalhados para processamento programático:
 
 ```json
 {
@@ -190,6 +257,7 @@ O script gera um arquivo JSON em `data/transcripts/` com esta estrutura:
   "metadata": {
     "source_file": "reuniao.wav",
     "language": "pt",
+    "model": "large-v3",
     "num_speakers": 3
   }
 }
@@ -238,6 +306,12 @@ python src/transcribe.py audio.wav --model small
 Specify the number of speakers:
 ```bash
 python src/transcribe.py audio.wav --num-speakers 3
+```
+
+### Want to see detailed logs?
+Use verbose mode to debug issues:
+```bash
+python src/transcribe.py audio.wav --verbose
 ```
 
 ---
