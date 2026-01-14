@@ -1,0 +1,18 @@
+# Meeting Transcriber - Dependências
+# Instalação: pip install -r requirements.txt
+
+# whisperX - Transcrição + Diarização integrada
+# Nota: whisperX instala faster-whisper, torch, e outras dependências automaticamente
+whisperx>=3.1.0
+
+# Utilitários
+python-dotenv>=1.0.0  # Para carregar .env
+
+# Opcional: para desenvolvimento
+# pytest>=7.0.0        # Testes
+# black>=23.0.0        # Formatação
+# ruff>=0.1.0          # Linting
+
+# Nota sobre instalação em Mac Apple Silicon:
+# Se houver problemas com torch, instalar manualmente:
+# pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu

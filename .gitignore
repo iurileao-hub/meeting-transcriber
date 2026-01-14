@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+
+# Ambiente
+.env
+.env.local
+
+# Dados (não versionar áudios e transcrições)
+data/audio/*
+data/transcripts/*
+data/outputs/*
+!data/audio/.gitkeep
+!data/transcripts/.gitkeep
+!data/outputs/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Modelos baixados (muito grandes)
+*.pt
+*.bin
+models/
+
+# Logs
+*.log
+
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
