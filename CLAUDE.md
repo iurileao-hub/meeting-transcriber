@@ -30,24 +30,49 @@ Sistema local de transcrição de reuniões com identificação de speakers. Des
 meeting-transcriber/
 ├── CLAUDE.md             # Este arquivo
 ├── PLAN.md               # Roadmap de desenvolvimento
-├── README.md             # Documentação de uso
+├── README.md             # Documentação de uso (bilíngue)
 ├── requirements.txt      # Dependências Python
 ├── pytest.ini            # Configuração de testes
 ├── .env                  # Configuração (não versionado)
 ├── .env.example          # Template de configuração
 ├── src/
-│   └── transcribe.py     # Script principal (~600 linhas)
+│   ├── transcribe.py     # CLI principal
+│   ├── backends/         # Backends de transcrição
+│   │   ├── __init__.py   # Factory: get_backend(mode)
+│   │   ├── base.py       # TranscriptionBackend ABC
+│   │   ├── whisperx_backend.py   # Modo meeting
+│   │   ├── mlx_backend.py        # Modo fast
+│   │   └── granite_backend.py    # Modo precise
+│   ├── i18n/             # Internacionalização
+│   │   ├── __init__.py   # get_translator(lang)
+│   │   ├── en.json       # Strings em inglês
+│   │   └── pt.json       # Strings em português
+│   ├── progress.py       # Barra de progresso
+│   ├── notify.py         # Notificações macOS
+│   ├── vocabulary.py     # Vocabulário customizado
+│   └── normalize.py      # Normalização de texto
 ├── prompts/              # Prompts para Claude Code
 │   ├── README.md         # Instruções de uso
 │   ├── ata_sei.md        # Ata formal (SEI!)
 │   └── resumo_executivo.md  # Resumo + Plano de trabalho
+├── vocab/                # Vocabulário
+│   ├── default.txt       # Termos padrão (não versionado)
+│   └── default.txt.example  # Template
 ├── data/
 │   ├── audio/            # Arquivos de entrada (.wav, .mp3)
 │   ├── transcripts/      # Saídas (.json, .txt, .md)
 │   └── outputs/          # Atas e documentos
-└── tests/
-    ├── __init__.py
-    └── test_transcribe.py  # 17 testes unitários
+└── tests/                # 95+ testes unitários
+    ├── test_transcribe.py
+    ├── test_backends.py
+    ├── test_whisperx_backend.py
+    ├── test_mlx_backend.py
+    ├── test_granite_backend.py
+    ├── test_i18n.py
+    ├── test_progress.py
+    ├── test_notify.py
+    ├── test_vocabulary.py
+    └── test_normalize.py
 ```
 
 ---
