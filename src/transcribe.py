@@ -9,19 +9,42 @@ Exemplos:
     python transcribe.py reuniao.wav
     python transcribe.py reuniao.mp3 --model medium --language pt
     python transcribe.py reuniao.wav --num-speakers 4 --output transcripts/
+    python transcribe.py reuniao.wav --mode fast --notify
 """
 
 import argparse
-import gc
 import json
 import logging
 import os
 import sys
+import time
 import warnings
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from dotenv import load_dotenv
+
+# Phase 3 imports - new features
+# Support both running as script and as module
+try:
+    from src.backends import get_backend, TranscriptionResult
+    from src.i18n import get_translator
+    from src.progress import ProgressReporter, Stage
+    from src.notify import notify
+    from src.vocabulary import load_vocabulary
+    from src.normalize import normalize_text
+except ImportError:
+    # When running as script (python src/transcribe.py), add parent to path
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).parent.parent))
+    from src.backends import get_backend, TranscriptionResult
+    from src.i18n import get_translator
+    from src.progress import ProgressReporter, Stage
+    from src.notify import notify
+    from src.vocabulary import load_vocabulary
+    from src.normalize import normalize_text
 
 
 def configure_warnings(verbose: bool = False) -> None:
@@ -312,6 +335,11 @@ def transcribe(
     output_format: str = "all",
     device: str = "cpu",
     verbose: bool = False,
+    mode: str = "meeting",
+    translator: Callable[[str], str] | None = None,
+    progress: ProgressReporter | None = None,
+    vocabulary: list[str] | None = None,
+    send_notify: bool = False,
 ) -> dict:
     """
     Transcreve áudio com identificação de speakers.
@@ -327,6 +355,11 @@ def transcribe(
         output_format: Formato de saída (json, txt, md, all)
         device: Dispositivo de processamento (cpu, cuda, mps)
         verbose: Se True, mostra warnings e logs detalhados
+        mode: Modo de transcrição (fast, meeting, precise)
+        translator: Função de tradução para i18n
+        progress: Reporter de progresso
+        vocabulary: Lista de termos customizados
+        send_notify: Se True, envia notificação ao finalizar
 
     Returns:
         Dicionário com transcrição e metadados
@@ -334,146 +367,127 @@ def transcribe(
     Raises:
         TranscriptionError: Se ocorrer erro em qualquer etapa do processo.
     """
-    import whisperx
+    start_time = time.time()
+
+    # Initialize defaults for new parameters
+    if translator is None:
+        translator = get_translator()
+
+    # Determine UI language from translator (check a known translation)
+    ui_lang = "pt" if translator("messages.complete") == "Transcrição completa" else "en"
+
+    # Get the appropriate backend for the mode
+    try:
+        backend = get_backend(mode)
+    except ValueError as e:
+        raise TranscriptionError(translator("messages.invalid_mode")) from e
+
+    # Configure backend with model settings
+    backend.model_size = model_size
+    backend.device = device
+
+    # Determine number of stages based on backend capabilities
+    total_stages = 5 if backend.supports_diarization else 3
+
+    if progress is None:
+        progress = ProgressReporter(total_stages=total_stages, lang=ui_lang)
 
     audio_path_obj = Path(audio_path)
     validate_audio_file(audio_path_obj)
 
-    compute_type = get_compute_type(device)
-    batch_size = get_batch_size(device, model_size)
+    # Create progress callback for backend
+    stage_map = {
+        "loading": Stage.LOADING,
+        "transcribing": Stage.TRANSCRIBING,
+        "aligning": Stage.ALIGNING,
+        "diarizing": Stage.DIARIZING,
+        "saving": Stage.SAVING,
+    }
+    current_stage_name = [None]  # Use list to allow modification in closure
 
-    # [1/5] Carregar modelo
+    def progress_callback(stage_name: str, percent: float) -> None:
+        """Callback for backend to report progress."""
+        stage = stage_map.get(stage_name)
+        if stage:
+            # Advance to next stage if we're starting a new one
+            if current_stage_name[0] != stage_name:
+                if current_stage_name[0] is not None:
+                    progress.advance()
+                current_stage_name[0] = stage_name
+            progress.update(stage, percent)
+
+    # Transcribe using the backend
     try:
-        print(f"[1/5] Carregando modelo {model_size} ({compute_type})...")
-        # Suprimir prints de bibliotecas externas durante carregamento
         with SuppressOutput(suppress_stdout=not verbose, suppress_stderr=not verbose):
-            model = whisperx.load_model(
-                model_size,
-                device,
-                compute_type=compute_type,
+            backend_result = backend.transcribe(
+                audio_path=audio_path,
                 language=language,
+                num_speakers=num_speakers,
+                min_speakers=min_speakers,
+                max_speakers=max_speakers,
+                progress_callback=progress_callback,
             )
+    except ValueError as e:
+        progress.error(str(e))
+        raise TranscriptionError(str(e)) from e
     except Exception as e:
+        progress.error(str(e))
         raise TranscriptionError(
-            f"Falha ao carregar modelo '{model_size}': {e}\n"
-            "Verifique sua conexão com a internet para download do modelo."
+            f"Transcription failed: {e}\n"
+            "Check your HuggingFace token and model access permissions."
         ) from e
 
-    # [2/5] Transcrever áudio
-    try:
-        print(f"[2/5] Transcrevendo {audio_path} (batch_size={batch_size})...")
-        with SuppressOutput(suppress_stdout=not verbose, suppress_stderr=not verbose):
-            audio = whisperx.load_audio(audio_path)
-            result = model.transcribe(audio, batch_size=batch_size)
-            detected_language = result.get("language", language or "unknown")
-    except Exception as e:
-        raise TranscriptionError(
-            f"Falha ao transcrever áudio '{audio_path}': {e}\n"
-            "Verifique se o arquivo de áudio está corrompido ou se FFmpeg está instalado."
-        ) from e
+    # Apply text normalization to segments
+    segments = backend_result.segments
+    for segment in segments:
+        if "text" in segment:
+            segment["text"] = normalize_text(segment["text"])
 
-    print(f"      Idioma detectado: {detected_language}")
-
-    # Liberar memória do modelo de transcrição
-    del model
-    gc.collect()
-
-    # [3/5] Alinhar palavras
-    try:
-        print("[3/5] Alinhando palavras...")
-        with SuppressOutput(suppress_stdout=not verbose, suppress_stderr=not verbose):
-            model_a, metadata = whisperx.load_align_model(
-                language_code=detected_language,
-                device=device,
-            )
-            result = whisperx.align(
-                result["segments"],
-                model_a,
-                metadata,
-                audio,
-                device,
-                return_char_alignments=False,
-            )
-    except Exception as e:
-        raise TranscriptionError(
-            f"Falha ao alinhar palavras: {e}\n"
-            f"Modelo de alinhamento pode não estar disponível para '{detected_language}'."
-        ) from e
-
-    # Liberar memória do modelo de alinhamento
-    del model_a
-    gc.collect()
-
-    # [4/5] Identificar speakers
-    try:
-        print("[4/5] Identificando speakers...")
-        hf_token = load_hf_token()
-        from whisperx.diarize import DiarizationPipeline
-
-        with SuppressOutput(suppress_stdout=not verbose, suppress_stderr=not verbose):
-            diarize_model = DiarizationPipeline(
-                use_auth_token=hf_token,
-                device=device,
-            )
-
-            diarize_kwargs = {}
-            if num_speakers:
-                diarize_kwargs["num_speakers"] = num_speakers
-            if min_speakers:
-                diarize_kwargs["min_speakers"] = min_speakers
-            if max_speakers:
-                diarize_kwargs["max_speakers"] = max_speakers
-
-            diarize_segments = diarize_model(audio, **diarize_kwargs)
-            result = whisperx.assign_word_speakers(diarize_segments, result)
-    except TranscriptionError:
-        raise  # Re-raise TranscriptionError (token não encontrado)
-    except Exception as e:
-        raise TranscriptionError(
-            f"Falha na identificação de speakers: {e}\n"
-            "Verifique se o token HuggingFace é válido e se você aceitou os termos:\n"
-            "- https://huggingface.co/pyannote/speaker-diarization-3.1\n"
-            "- https://huggingface.co/pyannote/segmentation-3.0"
-        ) from e
-
-    # Liberar memória do modelo de diarização
-    del diarize_model
-    gc.collect()
-
-    # Adicionar metadados
-    result["metadata"] = {
-        "source_file": audio_path_obj.name,
-        "transcribed_at": datetime.now().isoformat(),
-        "model": model_size,
-        "language": detected_language,
-        "device": device,
-        "compute_type": compute_type,
-        "num_segments": len(result.get("segments", [])),
+    # Convert TranscriptionResult to dict format
+    result = {
+        "segments": segments,
+        "metadata": {
+            "source_file": audio_path_obj.name,
+            "transcribed_at": datetime.now().isoformat(),
+            "model": model_size,
+            "language": backend_result.language,
+            "device": device,
+            "mode": mode,
+            "backend": backend.name,
+            "num_segments": len(segments),
+            **backend_result.metadata,
+        },
     }
 
-    # Contar speakers únicos
+    # Count unique speakers
     speakers = set()
-    for seg in result.get("segments", []):
+    for seg in segments:
         if "speaker" in seg:
             speakers.add(seg["speaker"])
     result["metadata"]["num_speakers"] = len(speakers)
 
-    # [5/5] Salvar resultado
+    # Add vocabulary info if used
+    if vocabulary:
+        result["metadata"]["vocabulary_terms"] = len(vocabulary)
+
+    # Stage: Saving
+    progress_callback("saving", 0)
+
+    # Save results
     try:
-        print("[5/5] Salvando resultado...")
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         base_name = audio_path_obj.stem
         saved_files = []
 
-        # Determinar quais formatos salvar
+        # Determine which formats to save
         formats_to_save = []
         if output_format == "all":
             formats_to_save = ["json", "txt", "md"]
         else:
             formats_to_save = [output_format]
 
-        # Salvar em cada formato solicitado
+        # Save in each requested format
         for fmt in formats_to_save:
             if fmt == "json":
                 output_file = output_path / f"{base_name}.json"
@@ -489,17 +503,36 @@ def transcribe(
                 save_as_markdown(result, output_file)
                 saved_files.append(output_file)
 
+        progress_callback("saving", 100)
+
     except Exception as e:
+        progress.error(str(e))
         raise TranscriptionError(
-            f"Falha ao salvar transcrição: {e}\n"
-            f"Verifique permissões de escrita em '{output_dir}'."
+            f"Failed to save transcription: {e}\n"
+            f"Check write permissions for '{output_dir}'."
         ) from e
 
-    print(f"\n✓ Transcrição salva em:")
+    # Calculate duration
+    duration = time.time() - start_time
+
+    # Show completion message
+    progress.advance()  # Move past saving stage
+    if saved_files:
+        progress.complete(str(saved_files[0]), duration)
+
+    # Print summary
+    print(f"\n  {translator('stages.saving')}: {len(saved_files)} files")
     for f in saved_files:
-        print(f"  - {f}")
-    print(f"\n  Segmentos: {result['metadata']['num_segments']}")
-    print(f"  Speakers identificados: {result['metadata']['num_speakers']}")
+        print(f"    - {f}")
+    print(f"\n  Segments: {result['metadata']['num_segments']}")
+    print(f"  Speakers: {result['metadata']['num_speakers']}")
+
+    # Send notification if requested
+    if send_notify:
+        notify(
+            title=translator("messages.complete"),
+            message=f"{audio_path_obj.name} - {result['metadata']['num_segments']} segments",
+        )
 
     return result
 
@@ -513,6 +546,12 @@ Exemplos:
   python transcribe.py reuniao.wav
   python transcribe.py reuniao.mp3 --model medium --language pt
   python transcribe.py reuniao.wav --num-speakers 4
+  python transcribe.py reuniao.wav --mode fast --notify
+
+Modos de transcrição:
+  fast    - MLX backend, sem diarização (mais rápido)
+  meeting - WhisperX backend com diarização (padrão)
+  precise - Granite backend, maior precisão
 
 Modelos disponíveis (menor → maior):
   tiny, base, small, medium, large-v3
@@ -530,6 +569,12 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
     parser.add_argument(
         "audio_file",
         help="Caminho para o arquivo de áudio",
+    )
+    parser.add_argument(
+        "--mode",
+        default="meeting",
+        choices=["fast", "meeting", "precise"],
+        help="Modo de transcrição: fast (MLX, sem diarização), meeting (WhisperX, padrão), precise (Granite)",
     )
     parser.add_argument(
         "--model", "-m",
@@ -578,6 +623,21 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
         help="Dispositivo de processamento (default: cpu)",
     )
     parser.add_argument(
+        "--ui-lang",
+        default=None,
+        help="Idioma da interface (en, pt). Default: detecta automaticamente.",
+    )
+    parser.add_argument(
+        "--notify",
+        action="store_true",
+        help="Envia notificação do sistema ao finalizar (macOS)",
+    )
+    parser.add_argument(
+        "--vocab",
+        default=None,
+        help="Caminho para arquivo de vocabulário customizado (um termo por linha)",
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Mostra warnings e logs detalhados (útil para debug)",
@@ -588,6 +648,22 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
     # Reconfigurar warnings se modo verbose
     if args.verbose:
         configure_warnings(verbose=True)
+
+    # Initialize i18n translator
+    translator = get_translator(args.ui_lang)
+
+    # Determine UI language for progress reporter
+    ui_lang = "pt" if translator("messages.complete") == "Transcrição completa" else "en"
+
+    # Load vocabulary
+    vocabulary = []
+    if args.vocab:
+        vocabulary = load_vocabulary(extra_files=[args.vocab])
+    else:
+        # Auto-load default vocabulary if exists
+        default_vocab = Path("vocab/default.txt")
+        if default_vocab.exists():
+            vocabulary = load_vocabulary()
 
     try:
         transcribe(
@@ -601,12 +677,16 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
             output_format=args.format,
             device=args.device,
             verbose=args.verbose,
+            mode=args.mode,
+            translator=translator,
+            vocabulary=vocabulary if vocabulary else None,
+            send_notify=args.notify,
         )
     except TranscriptionError as e:
-        print(f"\n✗ Erro: {e}", file=sys.stderr)
+        print(f"\n{translator('messages.error')}: {e}", file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\n\n⚠ Transcrição cancelada pelo usuário.", file=sys.stderr)
+        print(f"\n\n{translator('messages.cancelled')}", file=sys.stderr)
         sys.exit(130)
 
 
