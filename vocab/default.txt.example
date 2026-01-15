@@ -1,0 +1,38 @@
+# Meeting Transcriber - Custom Vocabulary Template
+# Vocabulário Customizado para Transcrição (Template)
+#
+# Copy this file to default.txt and customize with your own terms.
+# Copie este arquivo para default.txt e customize com seus termos.
+#
+# Format: One term per line. Lines starting with # are comments.
+# Formato: Um termo por linha. Linhas começando com # são comentários.
+
+# ============================================
+# Acronyms / Siglas
+# ============================================
+# Add acronyms used in your organization
+# Adicione siglas usadas na sua organização
+#
+# NASA
+# ACME
+# HR
+
+# ============================================
+# Technical Terms / Termos Técnicos
+# ============================================
+# Add domain-specific vocabulary
+# Adicione vocabulário específico do seu domínio
+#
+# laparoscopy
+# kubernetes
+# amortization
+
+# ============================================
+# Proper Names / Nomes Próprios
+# ============================================
+# Add names of people, places, products
+# Adicione nomes de pessoas, lugares, produtos
+#
+# Dr. Smith
+# Acme Corp
+# Project Apollo

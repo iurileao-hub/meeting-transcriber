@@ -39,3 +39,7 @@ models/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Vocabulary (personal, not shared)
+vocab/default.txt
+!vocab/default.txt.example
