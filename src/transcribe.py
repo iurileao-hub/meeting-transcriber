@@ -25,26 +25,18 @@ from typing import Callable
 
 from dotenv import load_dotenv
 
+# Ensure src is importable
+_project_root = Path(__file__).parent.parent
+if str(_project_root) not in sys.path:
+    sys.path.insert(0, str(_project_root))
+
 # Phase 3 imports - new features
-# Support both running as script and as module
-try:
-    from src.backends import get_backend, TranscriptionResult
-    from src.i18n import get_translator
-    from src.progress import ProgressReporter, Stage
-    from src.notify import notify
-    from src.vocabulary import load_vocabulary
-    from src.normalize import normalize_text
-except ImportError:
-    # When running as script (python src/transcribe.py), add parent to path
-    import sys as _sys
-    from pathlib import Path as _Path
-    _sys.path.insert(0, str(_Path(__file__).parent.parent))
-    from src.backends import get_backend, TranscriptionResult
-    from src.i18n import get_translator
-    from src.progress import ProgressReporter, Stage
-    from src.notify import notify
-    from src.vocabulary import load_vocabulary
-    from src.normalize import normalize_text
+from src.backends import get_backend, TranscriptionResult
+from src.i18n import get_translator
+from src.progress import ProgressReporter, Stage
+from src.notify import notify
+from src.vocabulary import load_vocabulary
+from src.normalize import normalize_text
 
 
 def configure_warnings(verbose: bool = False) -> None:
@@ -127,12 +119,15 @@ class SuppressOutput:
         return self
 
     def __exit__(self, *args):
-        if self._stdout:
-            sys.stdout = self._stdout
-        if self._stderr:
-            sys.stderr = self._stderr
-        if self._devnull:
-            self._devnull.close()
+        try:
+            if self._stdout:
+                sys.stdout = self._stdout
+            if self._stderr:
+                sys.stderr = self._stderr
+        finally:
+            if self._devnull:
+                self._devnull.close()
+        return False  # Don't suppress exceptions
 
 
 # Aplicar configuração de warnings na importação
@@ -369,6 +364,16 @@ def transcribe(
     """
     start_time = time.time()
 
+    # Validate speaker parameters
+    if num_speakers is not None and num_speakers <= 0:
+        raise TranscriptionError("num_speakers must be positive")
+    if min_speakers is not None and min_speakers <= 0:
+        raise TranscriptionError("min_speakers must be positive")
+    if max_speakers is not None and max_speakers <= 0:
+        raise TranscriptionError("max_speakers must be positive")
+    if min_speakers and max_speakers and min_speakers > max_speakers:
+        raise TranscriptionError("min_speakers cannot exceed max_speakers")
+
     # Initialize defaults for new parameters
     if translator is None:
         translator = get_translator()
@@ -407,6 +412,11 @@ def transcribe(
 
     def progress_callback(stage_name: str, percent: float) -> None:
         """Callback for backend to report progress."""
+        # Validate percent range
+        if not isinstance(percent, (int, float)):
+            return
+        percent = max(0, min(100, percent))  # Clamp to 0-100
+
         stage = stage_map.get(stage_name)
         if stage:
             # Advance to next stage if we're starting a new one
@@ -524,8 +534,8 @@ def transcribe(
     print(f"\n  {translator('stages.saving')}: {len(saved_files)} files")
     for f in saved_files:
         print(f"    - {f}")
-    print(f"\n  Segments: {result['metadata']['num_segments']}")
-    print(f"  Speakers: {result['metadata']['num_speakers']}")
+    print(f"\n  {translator('output.segments')}: {result['metadata']['num_segments']}")
+    print(f"  {translator('output.speakers')}: {result['metadata']['num_speakers']}")
 
     # Send notification if requested
     if send_notify:
@@ -661,7 +671,7 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
         vocabulary = load_vocabulary(extra_files=[args.vocab])
     else:
         # Auto-load default vocabulary if exists
-        default_vocab = Path("vocab/default.txt")
+        default_vocab = Path(__file__).parent.parent / "vocab" / "default.txt"
         if default_vocab.exists():
             vocabulary = load_vocabulary()
 

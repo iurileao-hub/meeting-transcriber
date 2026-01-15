@@ -13,6 +13,10 @@
     "invalid_mode": "Modo inválido. Escolha: fast, meeting, precise",
     "cancelled": "Transcrição cancelada pelo usuário"
   },
+  "output": {
+    "segments": "Segmentos",
+    "speakers": "Speakers identificados"
+  },
   "cli": {
     "description": "Transcreve áudio de reuniões com identificação de speakers",
     "help_audio": "Caminho para o arquivo de áudio",

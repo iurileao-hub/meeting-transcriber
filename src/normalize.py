@@ -31,6 +31,7 @@ def normalize_text(text: str) -> str:
     )
 
     # Capitalize first character
-    text = text[0].upper() + text[1:]
+    if len(text) > 0:
+        text = text[0].upper() + text[1:]
 
     return text
