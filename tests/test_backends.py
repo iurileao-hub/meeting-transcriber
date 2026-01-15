@@ -42,3 +42,37 @@ class TestTranscriptionBackend:
 
         with pytest.raises(TypeError):
             IncompleteBackend()
+
+
+class TestBackendFactory:
+    """Tests for get_backend factory function."""
+
+    def test_get_backend_meeting_mode(self):
+        from src.backends import get_backend
+
+        backend = get_backend("meeting")
+        assert backend.supports_diarization is True
+
+    def test_get_backend_fast_mode(self):
+        from src.backends import get_backend
+
+        backend = get_backend("fast")
+        assert backend.supports_diarization is False
+
+    def test_get_backend_precise_mode(self):
+        from src.backends import get_backend
+
+        backend = get_backend("precise")
+        assert backend.supports_diarization is True
+
+    def test_get_backend_invalid_mode_raises(self):
+        from src.backends import get_backend
+
+        with pytest.raises(ValueError, match="Invalid mode"):
+            get_backend("invalid")
+
+    def test_get_backend_returns_backend_instance(self):
+        from src.backends import TranscriptionBackend, get_backend
+
+        backend = get_backend("meeting")
+        assert isinstance(backend, TranscriptionBackend)
