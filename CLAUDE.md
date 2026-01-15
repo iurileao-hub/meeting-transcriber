@@ -15,9 +15,11 @@ Sistema local de transcrição de reuniões com identificação de speakers. Des
 ## Stack Tecnológica
 
 - **Python 3.12** (3.14 incompatível com dependências)
-- **whisperX 3.7.4** — Transcrição + diarização integrada
+- **whisperX 3.7.4** — Transcrição + diarização integrada (modo meeting)
 - **faster-whisper 1.2.1** — Backend de transcrição (usado pelo whisperX)
-- **pyannote.audio 3.4.0** — Speaker diarization (usado pelo whisperX)
+- **mlx-whisper** — Backend otimizado para Apple Silicon (modo fast)
+- **granite-speech** — Backend de alta precisão (modo precise)
+- **pyannote.audio 3.4.0** — Speaker diarization
 - **torch 2.8.0** — Framework de ML
 
 ---
@@ -68,6 +70,21 @@ python src/transcribe.py audio.wav --format txt
 # Com logs detalhados (debug)
 python src/transcribe.py audio.wav --verbose
 
+# Transcrição rápida (sem diarização)
+python src/transcribe.py audio.wav --mode fast
+
+# Transcrição de alta precisão
+python src/transcribe.py audio.wav --mode precise
+
+# Com notificação ao finalizar
+python src/transcribe.py audio.wav --notify
+
+# Com vocabulário customizado
+python src/transcribe.py audio.wav --vocab vocab/termos_tecnicos.txt
+
+# Interface em português
+python src/transcribe.py audio.wav --ui-lang pt
+
 # Ver ajuda
 python src/transcribe.py --help
 
@@ -88,6 +105,18 @@ pytest tests/ -v
 | `--device`, `-d` | Dispositivo | cpu, cuda, mps | cpu |
 | `--verbose`, `-v` | Logs detalhados | flag | false |
 | `--output`, `-o` | Diretório de saída | path | data/transcripts |
+| `--mode` | Modo de transcrição | fast, meeting, precise | meeting |
+| `--ui-lang` | Idioma da interface | en, pt | auto |
+| `--notify` | Notificação macOS | flag | false |
+| `--vocab` | Arquivo de vocabulário | path | - |
+
+### Modos de Transcrição
+
+| Modo | Backend | Diarização | Velocidade | Uso |
+|------|---------|------------|------------|-----|
+| `fast` | MLX-Whisper | Não | 10-15x tempo real | Transcrição rápida |
+| `meeting` | WhisperX | Sim | Moderado | Reuniões (padrão) |
+| `precise` | Granite + pyannote | Sim | Mais lento | Alta precisão |
 
 ---
 
@@ -175,8 +204,14 @@ seguindo o padrão institucional brasileiro para o SEI!.
 - ✅ Tratamento de erros com mensagens úteis
 - ✅ Otimização de performance (compute_type, batch_size)
 - ✅ Liberação de memória após cada etapa
-- ✅ Testes unitários (17 testes)
+- ✅ Testes unitários (95+ testes)
+- ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
+- ✅ **[Fase 3]** Interface bilíngue (en/pt)
+- ✅ **[Fase 3]** Barra de progresso
+- ✅ **[Fase 3]** Notificações macOS
+- ✅ **[Fase 3]** Vocabulário customizado
+- ✅ **[Fase 3]** Normalização de texto
 
 ---
 
-*Última atualização: 14 de Janeiro de 2026*
+*Última atualização: 15 de Janeiro de 2026*

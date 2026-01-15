@@ -15,6 +15,11 @@ Local meeting transcription system with speaker identification (diarization).
 - Word-level timestamps with confidence scores
 - Multiple output formats (JSON, TXT, Markdown)
 - 100% local processing (no cloud APIs)
+- **[Phase 3]** Multiple transcription backends (MLX-Whisper, WhisperX, Granite)
+- **[Phase 3]** Bilingual interface (English/Portuguese)
+- **[Phase 3]** Progress bar with time estimates
+- **[Phase 3]** macOS notifications on completion
+- **[Phase 3]** Custom vocabulary support
 
 ### Requirements
 
@@ -78,6 +83,56 @@ python src/transcribe.py --help
 | `--format` | `-f` | Output format (json/txt/md/all) | all |
 | `--device` | `-d` | Processing device (cpu/cuda/mps) | cpu |
 | `--verbose` | `-v` | Show detailed logs and warnings | false |
+| `--mode` | | Transcription mode (fast/meeting/precise) | meeting |
+| `--ui-lang` | | Interface language (en/pt) | auto |
+| `--notify` | | Send macOS notification on completion | false |
+| `--vocab` | | Path to custom vocabulary file | - |
+
+### Transcription Modes
+
+| Mode | Backend | Diarization | Speed | Use Case |
+|------|---------|-------------|-------|----------|
+| `fast` | MLX-Whisper | No | 10-15x realtime | Quick transcription, Apple Silicon |
+| `meeting` | WhisperX | Yes | Moderate | Default, meetings with multiple speakers |
+| `precise` | Granite + pyannote | Yes | Slower | High accuracy, important recordings |
+
+```bash
+# Fast mode - quick transcription without speaker identification
+python src/transcribe.py audio.wav --mode fast
+
+# Meeting mode (default) - full diarization
+python src/transcribe.py audio.wav --mode meeting
+
+# Precise mode - highest accuracy
+python src/transcribe.py audio.wav --mode precise
+```
+
+### Custom Vocabulary
+
+Create `vocab/default.txt` with domain-specific terms (auto-loaded if exists):
+
+```
+# Company names
+ACME Corp
+TechStartup Inc
+
+# Technical terms
+API
+SDK
+Kubernetes
+```
+
+Or specify a custom file:
+```bash
+python src/transcribe.py audio.wav --vocab custom_terms.txt
+```
+
+### Notifications
+
+Enable macOS notifications for long transcriptions:
+```bash
+python src/transcribe.py long_meeting.wav --notify
+```
 
 ### Output Formats
 
@@ -172,6 +227,11 @@ Sistema local de transcrição de reuniões com identificação de speakers (dia
 - Timestamps a nível de palavra com scores de confiança
 - Múltiplos formatos de saída (JSON, TXT, Markdown)
 - Processamento 100% local (sem APIs na nuvem)
+- **[Fase 3]** Múltiplos backends de transcrição (MLX-Whisper, WhisperX, Granite)
+- **[Fase 3]** Interface bilíngue (Inglês/Português)
+- **[Fase 3]** Barra de progresso com estimativa de tempo
+- **[Fase 3]** Notificações macOS ao concluir
+- **[Fase 3]** Suporte a vocabulário customizado
 
 ### Requisitos
 
@@ -235,6 +295,56 @@ python src/transcribe.py --help
 | `--format` | `-f` | Formato de saída (json/txt/md/all) | all |
 | `--device` | `-d` | Dispositivo de processamento (cpu/cuda/mps) | cpu |
 | `--verbose` | `-v` | Mostra logs e warnings detalhados | false |
+| `--mode` | | Modo de transcrição (fast/meeting/precise) | meeting |
+| `--ui-lang` | | Idioma da interface (en/pt) | auto |
+| `--notify` | | Enviar notificação macOS ao concluir | false |
+| `--vocab` | | Caminho para arquivo de vocabulário | - |
+
+### Modos de Transcrição
+
+| Modo | Backend | Diarização | Velocidade | Uso |
+|------|---------|------------|------------|-----|
+| `fast` | MLX-Whisper | Não | 10-15x tempo real | Transcrição rápida, Apple Silicon |
+| `meeting` | WhisperX | Sim | Moderado | Padrão, reuniões com múltiplos speakers |
+| `precise` | Granite + pyannote | Sim | Mais lento | Alta precisão, gravações importantes |
+
+```bash
+# Modo fast - transcrição rápida sem identificação de speakers
+python src/transcribe.py audio.wav --mode fast
+
+# Modo meeting (padrão) - diarização completa
+python src/transcribe.py audio.wav --mode meeting
+
+# Modo precise - máxima precisão
+python src/transcribe.py audio.wav --mode precise
+```
+
+### Vocabulário Customizado
+
+Crie `vocab/default.txt` com termos específicos do domínio (carregado automaticamente se existir):
+
+```
+# Nomes de empresas
+PMDF
+FIAP
+
+# Termos técnicos
+API
+SDK
+Kubernetes
+```
+
+Ou especifique um arquivo customizado:
+```bash
+python src/transcribe.py audio.wav --vocab termos_custom.txt
+```
+
+### Notificações
+
+Habilite notificações macOS para transcrições longas:
+```bash
+python src/transcribe.py reuniao_longa.wav --notify
+```
 
 ### Formatos de Saída
 
