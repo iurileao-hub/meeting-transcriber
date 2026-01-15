@@ -1,0 +1,30 @@
+{
+  "stages": {
+    "loading": "Loading model",
+    "transcribing": "Transcribing",
+    "aligning": "Aligning",
+    "diarizing": "Diarizing",
+    "saving": "Saving"
+  },
+  "messages": {
+    "complete": "Transcription complete",
+    "error": "Error",
+    "file_not_found": "File not found",
+    "invalid_mode": "Invalid mode. Choose: fast, meeting, precise",
+    "cancelled": "Transcription cancelled by user"
+  },
+  "cli": {
+    "description": "Transcribe meeting audio with speaker identification",
+    "help_audio": "Path to audio file",
+    "help_mode": "Transcription mode (fast/meeting/precise)",
+    "help_model": "Whisper model size",
+    "help_language": "Audio language (auto-detect if not specified)",
+    "help_num_speakers": "Exact number of speakers (if known)",
+    "help_output": "Output directory",
+    "help_format": "Output format (json/txt/md/all)",
+    "help_ui_lang": "Interface language (en/pt)",
+    "help_notify": "Send system notification when done",
+    "help_vocab": "Additional vocabulary file",
+    "help_verbose": "Show detailed logs"
+  }
+}

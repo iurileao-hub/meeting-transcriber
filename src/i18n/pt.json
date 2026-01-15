@@ -1,0 +1,30 @@
+{
+  "stages": {
+    "loading": "Carregando modelo",
+    "transcribing": "Transcrevendo",
+    "aligning": "Alinhando",
+    "diarizing": "Diarizando",
+    "saving": "Salvando"
+  },
+  "messages": {
+    "complete": "Transcrição completa",
+    "error": "Erro",
+    "file_not_found": "Arquivo não encontrado",
+    "invalid_mode": "Modo inválido. Escolha: fast, meeting, precise",
+    "cancelled": "Transcrição cancelada pelo usuário"
+  },
+  "cli": {
+    "description": "Transcreve áudio de reuniões com identificação de speakers",
+    "help_audio": "Caminho para o arquivo de áudio",
+    "help_mode": "Modo de transcrição (fast/meeting/precise)",
+    "help_model": "Tamanho do modelo Whisper",
+    "help_language": "Idioma do áudio (detecta automaticamente se não especificado)",
+    "help_num_speakers": "Número exato de speakers (se conhecido)",
+    "help_output": "Diretório de saída",
+    "help_format": "Formato de saída (json/txt/md/all)",
+    "help_ui_lang": "Idioma da interface (en/pt)",
+    "help_notify": "Enviar notificação do sistema ao terminar",
+    "help_vocab": "Arquivo de vocabulário adicional",
+    "help_verbose": "Mostrar logs detalhados"
+  }
+}
