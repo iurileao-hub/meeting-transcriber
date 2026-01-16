@@ -1,18 +1,48 @@
-# Meeting Transcriber - Dependências
-# Instalação: pip install -r requirements.txt
+# Meeting Transcriber - Dependencies
+# Install: pip install -r requirements.txt
 
-# whisperX - Transcrição + Diarização integrada
-# Nota: whisperX instala faster-whisper, torch, e outras dependências automaticamente
-whisperx>=3.1.0
+# ==============================================================================
+# CORE DEPENDENCIES (required)
+# ==============================================================================
 
-# Utilitários
-python-dotenv>=1.0.0  # Para carregar .env
+# WhisperX - Transcription + Diarization (default backend: --mode meeting)
+# Note: whisperX installs faster-whisper, torch, torchaudio automatically
+whisperx==3.7.4
 
-# Desenvolvimento
-pytest>=7.0.0         # Testes unitários
-# black>=23.0.0       # Formatação
-# ruff>=0.1.0         # Linting
+# Environment variables
+python-dotenv>=1.0.0
 
-# Nota sobre instalação em Mac Apple Silicon:
-# Se houver problemas com torch, instalar manualmente:
-# pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+# ==============================================================================
+# OPTIONAL BACKENDS
+# ==============================================================================
+
+# Fast mode (--mode fast) - Apple Silicon optimized
+# Uncomment to install:
+# mlx-whisper>=0.4.0
+
+# Precise mode (--mode precise) - IBM Granite Speech
+# Requires ~16GB RAM. Uncomment to install:
+# transformers>=4.40.0
+# accelerate>=0.30.0
+
+# ==============================================================================
+# DEVELOPMENT
+# ==============================================================================
+
+pytest>=8.0.0
+
+# Code quality (optional):
+# black>=24.0.0
+# ruff>=0.4.0
+
+# ==============================================================================
+# NOTES
+# ==============================================================================
+
+# Mac Apple Silicon - if torch issues occur:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Install all optional backends:
+#   pip install mlx-whisper transformers accelerate
+
+# Tested with Python 3.12 (3.14 not compatible)
