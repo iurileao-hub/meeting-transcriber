@@ -6,9 +6,9 @@ Instruções para Claude Code ao trabalhar neste repositório.
 
 ## Propósito do Projeto
 
-Sistema local de transcrição de reuniões com identificação de speakers. Desenvolvido como projeto educacional para aprendizado de ASR (Automatic Speech Recognition) e processamento de áudio.
+Sistema local de transcrição de reuniões com identificação de speakers. Converte arquivos de áudio em texto com timestamps e labels de speaker, processando 100% localmente sem envio de dados para nuvem.
 
-**Contexto:** Projeto pessoal de Iuri Almeida (médico, gestor PMDF, estudante de Ciência da Computação - FIAP 2026).
+**Casos de uso:** Reuniões de equipe, entrevistas, palestras, mensagens de voz, podcasts.
 
 ---
 
@@ -28,9 +28,9 @@ Sistema local de transcrição de reuniões com identificação de speakers. Des
 
 ```
 meeting-transcriber/
-├── CLAUDE.md             # Este arquivo
-├── PLAN.md               # Roadmap de desenvolvimento
-├── README.md             # Documentação de uso (bilíngue)
+├── CLAUDE.md             # Este arquivo (instruções para Claude Code)
+├── README.md             # Documentação de uso (EN)
+├── README.pt.md          # Documentação de uso (PT)
 ├── requirements.txt      # Dependências Python
 ├── pytest.ini            # Configuração de testes
 ├── .env                  # Configuração (não versionado)
@@ -51,10 +51,8 @@ meeting-transcriber/
 │   ├── notify.py         # Notificações macOS
 │   ├── vocabulary.py     # Vocabulário customizado
 │   └── normalize.py      # Normalização de texto
-├── prompts/              # Prompts para Claude Code
-│   ├── README.md         # Instruções de uso
-│   ├── ata_sei.md        # Ata formal (SEI!)
-│   └── resumo_executivo.md  # Resumo + Plano de trabalho
+├── examples/             # Templates de prompts (genéricos, bilíngues)
+├── prompts/              # Prompts pessoais (não versionado, gitignored)
 ├── vocab/                # Vocabulário
 │   ├── default.txt       # Termos padrão (não versionado)
 │   └── default.txt.example  # Template
@@ -62,7 +60,7 @@ meeting-transcriber/
 │   ├── audio/            # Arquivos de entrada (.wav, .mp3, .opus, etc.)
 │   ├── transcripts/      # Saídas (.json, .txt, .md)
 │   └── outputs/          # Atas e documentos
-└── tests/                # 95+ testes unitários
+└── tests/                # 148 testes unitários
     ├── test_transcribe.py
     ├── test_backends.py
     ├── test_whisperx_backend.py
@@ -175,29 +173,30 @@ pytest tests/ -v
 
 ## Workflow com Claude Code
 
-Após transcrição, usar os prompts padronizados em `prompts/`:
+Após transcrição, usar os templates em `examples/` (ou seus prompts pessoais em `prompts/`):
 
 ```bash
 # 1. Transcrever (gera .json, .txt, .md)
 python src/transcribe.py data/audio/reuniao.wav
 
-# 2. Usar prompt adequado no Claude Code
+# 2. Usar template adequado no Claude Code
 ```
 
-**Prompts disponíveis:**
+**Templates disponíveis (bilíngues):**
 
 | Arquivo | Uso |
 |---------|-----|
-| `prompts/ata_sei.md` | Ata formal para SEI! (padrão institucional) |
-| `prompts/resumo_executivo.md` | Resumo + Plano de trabalho (5W2H/SMART) |
+| `examples/meeting_minutes.md` | Ata formal de reunião |
+| `examples/executive_summary.md` | Resumo executivo + Plano de ação (5W2H/SMART) |
+| `examples/action_items.md` | Extração rápida de tarefas |
 
 **Exemplo de uso:**
 ```
 Leia data/transcripts/reuniao.txt e gere uma ATA DE REUNIÃO formal
-seguindo o padrão institucional brasileiro para o SEI!.
-
-[Cole o prompt completo de prompts/ata_sei.md]
+seguindo o template em examples/meeting_minutes.md
 ```
+
+**Nota:** Crie versões personalizadas em `prompts/` (não versionado).
 
 ---
 
@@ -257,7 +256,7 @@ seguindo o padrão institucional brasileiro para o SEI!.
 - ✅ Tratamento de erros com mensagens úteis
 - ✅ Otimização de performance (compute_type, batch_size)
 - ✅ Liberação de memória após cada etapa
-- ✅ Testes unitários (95+ testes)
+- ✅ Testes unitários (148 testes)
 - ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
 - ✅ **[Fase 3]** Interface bilíngue (en/pt)
 - ✅ **[Fase 3]** Barra de progresso
@@ -267,4 +266,29 @@ seguindo o padrão institucional brasileiro para o SEI!.
 
 ---
 
-*Última atualização: 16 de Janeiro de 2026*
+## Melhorias de Produção (v1.0)
+
+Revisão de código realizada em Janeiro 2026:
+
+### Granite Backend (modo precise)
+- ✅ Correção de division by zero em áudio silencioso
+- ✅ Uso correto de `device_map` para carregamento eficiente de modelo
+- ✅ Integração real de diarização (antes ignorava resultados do pyannote)
+- ✅ Normalização adequada de áudio com torchaudio
+
+### Segurança
+- ✅ Validação de path traversal em diretório de saída
+- ✅ Escape completo de AppleScript em notificações
+- ✅ Validação de paths de vocabulário customizado
+
+### Arquitetura
+- ✅ Factory pattern corrigido para passar configuração aos backends
+- ✅ Testes expandidos para cobrir Granite backend (148 testes total)
+
+### Documentação
+- ✅ PLAN.md movido para `docs/DEVELOPMENT_HISTORY.md`
+- ✅ README.md e CLAUDE.md consolidados como documentação principal
+
+---
+
+*Última atualização: 16 de Janeiro de 2026 (v1.0 - Production Ready)*

@@ -390,9 +390,10 @@ Após a transcrição, use IA para gerar atas de reunião:
 python src/transcribe.py reuniao.mp3
 
 # 2. Peça ao Claude para processar a transcrição
-# Veja a pasta prompts/ para templates:
-#   - prompts/ata_sei.md — Ata formal (padrão SEI! brasileiro)
-#   - prompts/resumo_executivo.md — Resumo executivo com plano de ação
+# Veja a pasta examples/ para templates de prompts:
+#   - examples/meeting_minutes.md — Ata formal de reunião
+#   - examples/executive_summary.md — Resumo executivo com plano de ação
+#   - examples/action_items.md — Extração rápida de tarefas
 ```
 
 ---

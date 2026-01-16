@@ -23,6 +23,8 @@ from transcribe import (
     get_compute_type,
     load_hf_token,
     validate_audio_file,
+    validate_output_path,
+    FORBIDDEN_OUTPUT_PATHS,
 )
 
 
@@ -153,3 +155,55 @@ class TestTranscriptionError:
         with pytest.raises(TranscriptionError) as exc_info:
             raise TranscriptionError("Mensagem de teste")
         assert "Mensagem de teste" in str(exc_info.value)
+
+
+class TestPathTraversalSecurity:
+    """Security tests for path traversal prevention."""
+
+    def test_valid_relative_path_allowed(self, tmp_path):
+        """Valid relative paths should be allowed."""
+        output_dir = tmp_path / "output"
+        path = validate_output_path(str(output_dir))
+        assert path.is_absolute()
+
+    def test_valid_absolute_path_allowed(self, tmp_path):
+        """Valid absolute paths should be allowed."""
+        path = validate_output_path(str(tmp_path))
+        assert path == tmp_path.resolve()
+
+    def test_sys_blocked(self):
+        """/sys directory should be blocked."""
+        with pytest.raises(TranscriptionError) as exc_info:
+            validate_output_path("/sys")
+        assert "system directory" in str(exc_info.value).lower()
+
+    def test_proc_blocked(self):
+        """/proc directory should be blocked."""
+        with pytest.raises(TranscriptionError) as exc_info:
+            validate_output_path("/proc")
+        assert "system directory" in str(exc_info.value).lower()
+
+    def test_root_blocked(self):
+        """/root directory should be blocked."""
+        with pytest.raises(TranscriptionError) as exc_info:
+            validate_output_path("/root")
+        assert "system directory" in str(exc_info.value).lower()
+
+    def test_boot_blocked(self):
+        """/boot directory should be blocked."""
+        with pytest.raises(TranscriptionError) as exc_info:
+            validate_output_path("/boot")
+        assert "system directory" in str(exc_info.value).lower()
+
+    def test_root_subdir_blocked(self):
+        """Subdirectories of /root should be blocked."""
+        with pytest.raises(TranscriptionError) as exc_info:
+            validate_output_path("/root/.ssh")
+        assert "system directory" in str(exc_info.value).lower()
+
+    def test_forbidden_paths_constant_populated(self):
+        """FORBIDDEN_OUTPUT_PATHS should contain common system paths."""
+        assert "/sys" in FORBIDDEN_OUTPUT_PATHS
+        assert "/proc" in FORBIDDEN_OUTPUT_PATHS
+        assert "/root" in FORBIDDEN_OUTPUT_PATHS
+        assert "/boot" in FORBIDDEN_OUTPUT_PATHS

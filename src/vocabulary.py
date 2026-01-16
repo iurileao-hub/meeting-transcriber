@@ -2,6 +2,40 @@
 from pathlib import Path
 
 
+# Sensitive path prefixes that should not be read as vocabulary files (security)
+# These are prefixes, not exact paths
+# Note: macOS resolves /var to /private/var, so we include both variants
+FORBIDDEN_VOCAB_PREFIXES = [
+    "/etc/passwd",
+    "/etc/shadow",
+    "/etc/sudoers",
+    "/etc/ssh",
+    "/root",
+    "/var/log",
+    "/private/var/log",  # macOS resolved path
+    "/Library/Keychains",  # macOS
+]
+
+
+def _is_safe_vocab_path(path: Path) -> bool:
+    """Check if vocabulary path is safe to read.
+
+    Args:
+        path: Path to check.
+
+    Returns:
+        True if path is safe, False otherwise.
+    """
+    resolved = path.resolve()
+    path_str = str(resolved)
+
+    for forbidden in FORBIDDEN_VOCAB_PREFIXES:
+        if path_str == forbidden or path_str.startswith(forbidden + "/"):
+            return False
+
+    return True
+
+
 def parse_vocab_file(path: Path) -> list[str]:
     """Parse vocabulary file.
 
@@ -51,10 +85,13 @@ def load_vocabulary(
     if default_file.exists():
         words.extend(parse_vocab_file(default_file))
 
-    # Load extra files
+    # Load extra files (with security validation)
     for filepath in extra_files or []:
         path = Path(filepath)
         if path.exists():
+            if not _is_safe_vocab_path(path):
+                # Silently skip forbidden paths to avoid information disclosure
+                continue
             words.extend(parse_vocab_file(path))
 
     # Deduplicate while preserving order

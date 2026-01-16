@@ -44,5 +44,8 @@ htmlcov/
 vocab/default.txt
 !vocab/default.txt.example
 
+# Personal prompts (not shared)
+prompts/
+
 # Worktrees
 .worktrees/

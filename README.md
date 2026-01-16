@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-lightgrey.svg)](https://support.apple.com/en-us/HT211814)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-148%20passed-brightgreen.svg)](tests/)
 [![Offline](https://img.shields.io/badge/works-100%25%20offline-blueviolet.svg)]()
 
 **Turn your meeting recordings into searchable, speaker-labeled transcripts — 100% locally, no cloud required.**
@@ -390,9 +390,10 @@ After transcription, use AI to generate meeting minutes:
 python src/transcribe.py meeting.mp3
 
 # 2. Ask Claude to process the transcript
-# See prompts/ folder for templates:
-#   - prompts/ata_sei.md — Formal meeting minutes (Brazilian SEI! format)
-#   - prompts/resumo_executivo.md — Executive summary with action items
+# See examples/ folder for prompt templates:
+#   - examples/meeting_minutes.md — Formal meeting minutes
+#   - examples/executive_summary.md — Executive summary with action plan
+#   - examples/action_items.md — Quick action items extraction
 ```
 
 ---

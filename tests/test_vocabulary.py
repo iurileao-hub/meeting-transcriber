@@ -1,7 +1,12 @@
 """Tests for vocabulary system."""
 import pytest
 from pathlib import Path
-from src.vocabulary import load_vocabulary, parse_vocab_file
+from src.vocabulary import (
+    load_vocabulary,
+    parse_vocab_file,
+    _is_safe_vocab_path,
+    FORBIDDEN_VOCAB_PREFIXES,
+)
 
 
 class TestParseVocabFile:
@@ -60,3 +65,49 @@ class TestLoadVocabulary:
         file2.write_text("word2\nword3")
         words = load_vocabulary(vocab_dir=tmp_path, extra_files=[str(file1), str(file2)])
         assert words.count("word2") == 1
+
+
+class TestVocabPathSecurity:
+    """Security tests for vocabulary path validation."""
+
+    def test_safe_path_is_allowed(self, tmp_path):
+        safe_path = tmp_path / "vocab.txt"
+        assert _is_safe_vocab_path(safe_path) is True
+
+    def test_root_is_blocked(self):
+        forbidden_path = Path("/root")
+        assert _is_safe_vocab_path(forbidden_path) is False
+
+    def test_var_log_is_blocked(self):
+        forbidden_path = Path("/var/log")
+        assert _is_safe_vocab_path(forbidden_path) is False
+
+    def test_subdir_of_root_is_blocked(self):
+        """Subdirectory of /root should be blocked."""
+        forbidden_path = Path("/root/.ssh/authorized_keys")
+        assert _is_safe_vocab_path(forbidden_path) is False
+
+    def test_var_log_subdir_is_blocked(self):
+        """Subdirectory of /var/log should be blocked."""
+        forbidden_path = Path("/var/log/auth.log")
+        assert _is_safe_vocab_path(forbidden_path) is False
+
+    def test_forbidden_prefixes_constant_populated(self):
+        """FORBIDDEN_VOCAB_PREFIXES should contain sensitive paths."""
+        assert "/root" in FORBIDDEN_VOCAB_PREFIXES
+        assert "/var/log" in FORBIDDEN_VOCAB_PREFIXES
+
+    def test_forbidden_paths_skipped_in_load(self, tmp_path):
+        """Forbidden paths should be silently skipped during loading."""
+        # Create a valid vocab file
+        valid_file = tmp_path / "valid.txt"
+        valid_file.write_text("valid_word")
+
+        # Try to load with a forbidden path (should be skipped)
+        words = load_vocabulary(
+            vocab_dir=tmp_path,
+            extra_files=[str(valid_file), "/root/forbidden.txt"]
+        )
+
+        # Valid word should be loaded, forbidden path skipped
+        assert "valid_word" in words

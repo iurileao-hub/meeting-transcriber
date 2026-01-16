@@ -158,6 +158,42 @@ class TranscriptionError(Exception):
 # Formatos de áudio suportados pelo whisperX/ffmpeg
 SUPPORTED_AUDIO_FORMATS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac", ".opus"}
 
+# System directories that should never be written to (security)
+# Note: /private/var/folders is used for temp dirs on macOS, so we allow it
+FORBIDDEN_OUTPUT_PATHS = {
+    "/etc", "/sys", "/proc", "/root", "/var/log", "/boot",
+    "/usr/bin", "/usr/sbin", "/usr/lib", "/bin", "/sbin",
+    "/System", "/Library",  # macOS system directories
+}
+
+
+def validate_output_path(output_dir: str) -> Path:
+    """Validate output directory path for security.
+
+    Prevents writing to system directories or other sensitive locations.
+
+    Args:
+        output_dir: Output directory path (relative or absolute).
+
+    Returns:
+        Resolved absolute Path object.
+
+    Raises:
+        TranscriptionError: If path is in a forbidden location.
+    """
+    path = Path(output_dir).resolve()
+    path_str = str(path)
+
+    # Check against forbidden paths
+    for forbidden in FORBIDDEN_OUTPUT_PATHS:
+        if path_str == forbidden or path_str.startswith(forbidden + "/"):
+            raise TranscriptionError(
+                f"Cannot write to system directory: {forbidden}\n"
+                f"Please choose a different output location."
+            )
+
+    return path
+
 
 def load_hf_token() -> str:
     """Carrega token HuggingFace do ambiente ou .env.
@@ -381,15 +417,16 @@ def transcribe(
     # Determine UI language from translator (check a known translation)
     ui_lang = "pt" if translator("messages.complete") == "Transcrição completa" else "en"
 
-    # Get the appropriate backend for the mode
+    # Get the appropriate backend for the mode with configuration
     try:
-        backend = get_backend(mode)
+        backend = get_backend(
+            mode,
+            model_size=model_size,
+            device=device,
+            # hf_token loaded from env by backend if needed
+        )
     except ValueError as e:
         raise TranscriptionError(translator("messages.invalid_mode")) from e
-
-    # Configure backend with model settings
-    backend.model_size = model_size
-    backend.device = device
 
     # Determine number of stages based on backend capabilities
     total_stages = 5 if backend.supports_diarization else 3
@@ -485,7 +522,8 @@ def transcribe(
 
     # Save results
     try:
-        output_path = Path(output_dir)
+        # Validate output path for security
+        output_path = validate_output_path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         base_name = audio_path_obj.stem
         saved_files = []
