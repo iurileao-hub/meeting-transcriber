@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Plataforma](https://img.shields.io/badge/Plataforma-macOS%20Apple%20Silicon-lightgrey.svg)](https://support.apple.com/pt-br/HT211814)
 [![Licença](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)](LICENSE)
-[![Testes](https://img.shields.io/badge/testes-95%20passaram-brightgreen.svg)](tests/)
+[![Testes](https://img.shields.io/badge/testes-148%20passaram-brightgreen.svg)](tests/)
 [![Offline](https://img.shields.io/badge/funciona-100%25%20offline-blueviolet.svg)]()
 
 **Transforme gravações de reuniões em transcrições com identificação de quem está falando — 100% local, sem nuvem.**
@@ -35,7 +35,7 @@ O Meeting Transcriber converte arquivos de áudio em texto, identificando automa
 
 ```bash
 # 1. Clone e configure
-git clone https://github.com/yourusername/meeting-transcriber.git
+git clone https://github.com/iurileao-hub/meeting-transcriber.git
 cd meeting-transcriber
 python3.12 -m venv venv && source venv/bin/activate
 
@@ -106,7 +106,7 @@ FFmpeg é uma ferramenta gratuita que converte formatos de áudio.
 
 ```bash
 # Clonar o repositório
-git clone https://github.com/yourusername/meeting-transcriber.git
+git clone https://github.com/iurileao-hub/meeting-transcriber.git
 cd meeting-transcriber
 
 # Criar ambiente Python isolado
@@ -367,7 +367,7 @@ Melhore a precisão para termos específicos do seu domínio:
 
 ```bash
 # Crie vocab/default.txt com seus termos (um por linha):
-PMDF
+ACME Corporation
 Dr. Silva
 Kubernetes
 API

@@ -35,7 +35,7 @@ Meeting Transcriber converts audio files into text with automatic speaker identi
 
 ```bash
 # 1. Clone and setup
-git clone https://github.com/yourusername/meeting-transcriber.git
+git clone https://github.com/iurileao-hub/meeting-transcriber.git
 cd meeting-transcriber
 python3.12 -m venv venv && source venv/bin/activate
 
@@ -106,7 +106,7 @@ FFmpeg is a free tool that handles audio format conversion.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/meeting-transcriber.git
+git clone https://github.com/iurileao-hub/meeting-transcriber.git
 cd meeting-transcriber
 
 # Create isolated Python environment
