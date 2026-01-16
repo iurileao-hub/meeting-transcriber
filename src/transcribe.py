@@ -156,7 +156,7 @@ class TranscriptionError(Exception):
 
 
 # Formatos de áudio suportados pelo whisperX/ffmpeg
-SUPPORTED_AUDIO_FORMATS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac"}
+SUPPORTED_AUDIO_FORMATS = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac", ".opus"}
 
 
 def load_hf_token() -> str:

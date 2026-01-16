@@ -18,7 +18,7 @@ Sistema local de transcrição de reuniões com identificação de speakers. Des
 - **whisperX 3.7.4** — Transcrição + diarização integrada (modo meeting)
 - **faster-whisper 1.2.1** — Backend de transcrição (usado pelo whisperX)
 - **mlx-whisper** — Backend otimizado para Apple Silicon (modo fast)
-- **granite-speech** — Backend de alta precisão (modo precise)
+- **IBM Granite Speech** — Backend de alta precisão via transformers (modo precise)
 - **pyannote.audio 3.4.0** — Speaker diarization
 - **torch 2.8.0** — Framework de ML
 
@@ -59,7 +59,7 @@ meeting-transcriber/
 │   ├── default.txt       # Termos padrão (não versionado)
 │   └── default.txt.example  # Template
 ├── data/
-│   ├── audio/            # Arquivos de entrada (.wav, .mp3)
+│   ├── audio/            # Arquivos de entrada (.wav, .mp3, .opus, etc.)
 │   ├── transcripts/      # Saídas (.json, .txt, .md)
 │   └── outputs/          # Atas e documentos
 └── tests/                # 95+ testes unitários
@@ -73,6 +73,34 @@ meeting-transcriber/
     ├── test_notify.py
     ├── test_vocabulary.py
     └── test_normalize.py
+```
+
+---
+
+## Formatos de Áudio Suportados
+
+```
+.wav, .mp3, .m4a, .flac, .ogg, .webm, .aac, .opus
+```
+
+O formato `.opus` é especialmente útil para mensagens de voz do WhatsApp.
+
+---
+
+## Instalação dos Backends
+
+```bash
+# Backend padrão (meeting) - já incluído no requirements.txt
+pip install -r requirements.txt
+
+# Backend rápido (fast) - Apple Silicon only
+pip install mlx-whisper
+
+# Backend de alta precisão (precise) - IBM Granite
+pip install transformers accelerate
+
+# Instalar todos os backends (recomendado)
+pip install mlx-whisper transformers accelerate
 ```
 
 ---
@@ -239,4 +267,4 @@ seguindo o padrão institucional brasileiro para o SEI!.
 
 ---
 
-*Última atualização: 15 de Janeiro de 2026*
+*Última atualização: 16 de Janeiro de 2026*

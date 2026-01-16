@@ -132,6 +132,7 @@ class TestSupportedFormats:
         assert ".mp3" in SUPPORTED_AUDIO_FORMATS
         assert ".m4a" in SUPPORTED_AUDIO_FORMATS
         assert ".flac" in SUPPORTED_AUDIO_FORMATS
+        assert ".opus" in SUPPORTED_AUDIO_FORMATS  # WhatsApp voice messages
 
     def test_no_video_formats(self):
         """Formatos de vídeo não devem estar incluídos."""

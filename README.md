@@ -1,466 +1,420 @@
 # Meeting Transcriber
 
-[English](#english) | [Português](#português)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-lightgrey.svg)](https://support.apple.com/en-us/HT211814)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-95%20passed-brightgreen.svg)](tests/)
+[![Offline](https://img.shields.io/badge/works-100%25%20offline-blueviolet.svg)]()
+
+**Turn your meeting recordings into searchable, speaker-labeled transcripts — 100% locally, no cloud required.**
+
+[Leia em Português](README.pt.md)
 
 ---
 
-## English
+## What It Does
 
-Local meeting transcription system with speaker identification (diarization).
+Meeting Transcriber converts audio files into text with automatic speaker identification. Your audio never leaves your computer.
 
-### Features
+**Perfect for:**
+- Team meetings and interviews
+- Lectures and presentations
+- WhatsApp voice messages
+- Podcasts and recordings
 
-- Audio transcription in Portuguese and English
-- Automatic speaker identification (diarization)
-- Word-level timestamps with confidence scores
-- Multiple output formats (JSON, TXT, Markdown)
-- 100% local processing (no cloud APIs)
-- **[Phase 3]** Multiple transcription backends (MLX-Whisper, WhisperX, Granite)
-- **[Phase 3]** Bilingual interface (English/Portuguese)
-- **[Phase 3]** Progress bar with time estimates
-- **[Phase 3]** macOS notifications on completion
-- **[Phase 3]** Custom vocabulary support
+**Output example:**
+```
+[00:00] SPEAKER_00: Good morning everyone, let's start the meeting.
+[00:05] SPEAKER_01: Thanks for joining. First item on the agenda...
+[00:12] SPEAKER_00: Before we begin, any updates from last week?
+```
+
+---
+
+## Quick Start
+
+```bash
+# 1. Clone and setup
+git clone https://github.com/yourusername/meeting-transcriber.git
+cd meeting-transcriber
+python3.12 -m venv venv && source venv/bin/activate
+
+# 2. Install
+brew install ffmpeg
+pip install -r requirements.txt
+
+# 3. Transcribe!
+python src/transcribe.py your-audio.mp3
+```
+
+> **First time?** You'll need a free [HuggingFace account](#huggingface-setup) for speaker identification.
+
+---
+
+## Supported Audio Formats
+
+| Format | Extension | Common Source |
+|--------|-----------|---------------|
+| MP3 | `.mp3` | Most audio players |
+| WAV | `.wav` | Professional recordings |
+| M4A | `.m4a` | iPhone/Mac recordings |
+| Opus | `.opus` | WhatsApp voice messages |
+| FLAC | `.flac` | Lossless audio |
+| OGG | `.ogg` | Web recordings |
+| WebM | `.webm` | Browser recordings |
+| AAC | `.aac` | Digital broadcasts |
+
+---
+
+## Installation
 
 ### Requirements
 
-- macOS with Apple Silicon (M1/M2/M3/M4)
-- Python 3.12 (3.14 not supported yet)
-- FFmpeg
-- HuggingFace account (free)
+| Requirement | Details |
+|-------------|---------|
+| **Computer** | Mac with Apple Silicon (M1, M2, M3, or M4 chip) |
+| **Python** | Version 3.12 (not 3.14) |
+| **Disk Space** | ~10GB for models |
+| **Internet** | Only for initial setup |
 
-### Installation
+### Step-by-Step Setup
+
+<details>
+<summary><strong>1. Install Python 3.12</strong> (if not installed)</summary>
 
 ```bash
-# 1. Create virtual environment
+# Using Homebrew
+brew install python@3.12
+
+# Verify installation
+python3.12 --version
+```
+</details>
+
+<details>
+<summary><strong>2. Install FFmpeg</strong> (audio processing)</summary>
+
+```bash
+brew install ffmpeg
+```
+
+FFmpeg is a free tool that handles audio format conversion.
+</details>
+
+<details>
+<summary><strong>3. Set up the project</strong></summary>
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/meeting-transcriber.git
+cd meeting-transcriber
+
+# Create isolated Python environment
 python3.12 -m venv venv
 source venv/bin/activate
 
-# 2. Install FFmpeg
-brew install ffmpeg
-
-# 3. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
-
-# 4. Configure HuggingFace
-cp .env.example .env
-# Edit .env and add your HF_TOKEN
-
-# 5. Accept pyannote terms (required for diarization)
-# Visit: https://huggingface.co/pyannote/speaker-diarization-3.1
-# Visit: https://huggingface.co/pyannote/segmentation-3.0
-# Click "Agree and access repository" on both
 ```
+</details>
 
-### Usage
+<details>
+<summary><strong>4. Configure HuggingFace</strong> (required for speaker identification)</summary>
+
+<a name="huggingface-setup"></a>
+
+HuggingFace provides the AI models for speaker identification. It's free.
+
+1. **Create account** at [huggingface.co](https://huggingface.co/join)
+
+2. **Get your token:**
+   - Go to [Settings → Access Tokens](https://huggingface.co/settings/tokens)
+   - Click "New token" → Name it anything → Create
+   - Copy the token (starts with `hf_`)
+
+3. **Save the token:**
+   ```bash
+   cp .env.example .env
+   # Edit .env and paste your token after HF_TOKEN=
+   ```
+
+4. **Accept model terms** (one-time):
+   - Visit [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
+   - Click "Agree and access repository"
+   - Visit [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0)
+   - Click "Agree and access repository"
+
+</details>
+
+### Optional: Additional Backends
+
+The default installation covers most needs. For specialized use cases:
+
+| Mode | Install Command | Best For |
+|------|-----------------|----------|
+| `fast` | `pip install mlx-whisper` | Quick transcriptions (no speaker ID) |
+| `precise` | `pip install transformers accelerate` | Maximum accuracy (IBM Granite) |
 
 ```bash
-# Basic transcription (generates .json, .txt, and .md)
-python src/transcribe.py data/audio/meeting.wav
-
-# With options
-python src/transcribe.py meeting.mp3 --model medium --language en
-
-# Specify number of speakers
-python src/transcribe.py meeting.wav --num-speakers 4
-
-# Choose output format
-python src/transcribe.py meeting.wav --format txt
-
-# Show help
-python src/transcribe.py --help
+# Install all backends (recommended for power users)
+pip install mlx-whisper transformers accelerate
 ```
-
-### Command-Line Options
-
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--model` | `-m` | Whisper model size (tiny/base/small/medium/large-v3) | large-v3 |
-| `--language` | `-l` | Language code (en, pt, etc.) or auto-detect | auto |
-| `--num-speakers` | `-n` | Exact number of speakers (if known) | auto |
-| `--min-speakers` | | Minimum expected speakers | - |
-| `--max-speakers` | | Maximum expected speakers | - |
-| `--output` | `-o` | Output directory | data/transcripts |
-| `--format` | `-f` | Output format (json/txt/md/all) | all |
-| `--device` | `-d` | Processing device (cpu/cuda/mps) | cpu |
-| `--verbose` | `-v` | Show detailed logs and warnings | false |
-| `--mode` | | Transcription mode (fast/meeting/precise) | meeting |
-| `--ui-lang` | | Interface language (en/pt) | auto |
-| `--notify` | | Send macOS notification on completion | false |
-| `--vocab` | | Path to custom vocabulary file | - |
-
-### Transcription Modes
-
-| Mode | Backend | Diarization | Speed | Use Case |
-|------|---------|-------------|-------|----------|
-| `fast` | MLX-Whisper | No | 10-15x realtime | Quick transcription, Apple Silicon |
-| `meeting` | WhisperX | Yes | Moderate | Default, meetings with multiple speakers |
-| `precise` | Granite + pyannote | Yes | Slower | High accuracy, important recordings |
-
-```bash
-# Fast mode - quick transcription without speaker identification
-python src/transcribe.py audio.wav --mode fast
-
-# Meeting mode (default) - full diarization
-python src/transcribe.py audio.wav --mode meeting
-
-# Precise mode - highest accuracy
-python src/transcribe.py audio.wav --mode precise
-```
-
-### Custom Vocabulary
-
-Create `vocab/default.txt` with domain-specific terms (auto-loaded if exists):
-
-```
-# Company names
-ACME Corp
-TechStartup Inc
-
-# Technical terms
-API
-SDK
-Kubernetes
-```
-
-Or specify a custom file:
-```bash
-python src/transcribe.py audio.wav --vocab custom_terms.txt
-```
-
-### Notifications
-
-Enable macOS notifications for long transcriptions:
-```bash
-python src/transcribe.py long_meeting.wav --notify
-```
-
-### Output Formats
-
-| Format | Description | Use Case |
-|--------|-------------|----------|
-| `json` | Complete with word-level timestamps | Processing by code/Claude |
-| `txt` | Simple text with speaker labels | Quick reading |
-| `md` | Formatted Markdown | Review/editing |
-| `all` | All formats above (default) | Maximum flexibility |
-
-**Example output (.txt):**
-```
-[00:00] SPEAKER_00: Good morning everyone, let's start the meeting.
-
-[00:05] SPEAKER_01: Thanks for joining. First item on the agenda...
-```
-
-### JSON Structure
-
-The JSON file contains detailed data for programmatic processing:
-
-```json
-{
-  "segments": [
-    {
-      "start": 0.5,
-      "end": 5.2,
-      "text": "Good morning everyone, let's start the meeting.",
-      "speaker": "SPEAKER_00",
-      "words": [
-        {"word": "Good", "start": 0.5, "end": 0.7, "score": 0.95, "speaker": "SPEAKER_00"}
-      ]
-    }
-  ],
-  "metadata": {
-    "source_file": "meeting.wav",
-    "language": "en",
-    "model": "large-v3",
-    "num_speakers": 3
-  }
-}
-```
-
-### Integration with Claude Code
-
-After transcription, use the prompts in `prompts/` to generate documents:
-
-```bash
-# 1. Transcribe audio
-python src/transcribe.py data/audio/meeting.wav
-
-# 2. In Claude Code, use one of the prompts:
-```
-
-**Available prompts:**
-
-| Prompt | Description |
-|--------|-------------|
-| `prompts/ata_sei.md` | Formal meeting minutes for SEI! system |
-| `prompts/resumo_executivo.md` | Executive summary + action plan (5W2H) |
-
-**Example:**
-```
-Read data/transcripts/meeting.txt and generate a formal MEETING MINUTES
-following the Brazilian institutional standard for SEI!.
-
-[Paste the rest of the prompt from prompts/ata_sei.md]
-```
-
-### Available Models
-
-| Model | Accuracy | Speed | RAM |
-|-------|----------|-------|-----|
-| tiny | Low | Very fast | 1GB |
-| base | Medium | Fast | 1GB |
-| small | Good | Moderate | 2GB |
-| medium | Very good | Slow | 5GB |
-| large-v3 | Excellent | Slower | 10GB |
-
-**Recommendation:** Start with `small` for testing, use `large-v3` for production.
 
 ---
 
-## Português
+## Usage Guide
 
-Sistema local de transcrição de reuniões com identificação de speakers (diarização).
-
-### Funcionalidades
-
-- Transcrição de áudio em português e inglês
-- Identificação automática de speakers (diarização)
-- Timestamps a nível de palavra com scores de confiança
-- Múltiplos formatos de saída (JSON, TXT, Markdown)
-- Processamento 100% local (sem APIs na nuvem)
-- **[Fase 3]** Múltiplos backends de transcrição (MLX-Whisper, WhisperX, Granite)
-- **[Fase 3]** Interface bilíngue (Inglês/Português)
-- **[Fase 3]** Barra de progresso com estimativa de tempo
-- **[Fase 3]** Notificações macOS ao concluir
-- **[Fase 3]** Suporte a vocabulário customizado
-
-### Requisitos
-
-- macOS com Apple Silicon (M1/M2/M3/M4)
-- Python 3.12 (3.14 ainda não suportado)
-- FFmpeg
-- Conta HuggingFace (gratuita)
-
-### Instalação
+### Basic Usage
 
 ```bash
-# 1. Criar ambiente virtual
-python3.12 -m venv venv
-source venv/bin/activate
+# Transcribe any supported audio file
+python src/transcribe.py meeting.mp3
 
-# 2. Instalar FFmpeg
-brew install ffmpeg
-
-# 3. Instalar dependências
-pip install -r requirements.txt
-
-# 4. Configurar HuggingFace
-cp .env.example .env
-# Editar .env e adicionar seu HF_TOKEN
-
-# 5. Aceitar termos do pyannote (necessário para diarização)
-# Acessar: https://huggingface.co/pyannote/speaker-diarization-3.1
-# Acessar: https://huggingface.co/pyannote/segmentation-3.0
-# Clicar em "Agree and access repository" em ambos
+# Output: Creates meeting.json, meeting.txt, and meeting.md
 ```
 
-### Uso
+### Choose Your Mode
+
+| I want... | Command | Notes |
+|-----------|---------|-------|
+| **Best quality** (default) | `python src/transcribe.py audio.mp3` | Speaker identification included |
+| **Fastest result** | `python src/transcribe.py audio.mp3 --mode fast` | No speaker identification |
+| **Maximum accuracy** | `python src/transcribe.py audio.mp3 --mode precise` | Slower but most accurate |
+
+### Common Options
 
 ```bash
-# Transcrição básica (gera .json, .txt e .md)
-python src/transcribe.py data/audio/reuniao.wav
+# Specify language (improves accuracy)
+python src/transcribe.py meeting.mp3 --language pt
 
-# Com opções
-python src/transcribe.py reuniao.mp3 --model medium --language pt
+# Know how many speakers? Tell the system
+python src/transcribe.py meeting.mp3 --num-speakers 3
 
-# Especificar número de speakers
-python src/transcribe.py reuniao.wav --num-speakers 4
+# Get notified when done (useful for long files)
+python src/transcribe.py meeting.mp3 --notify
 
-# Escolher formato de saída
-python src/transcribe.py reuniao.wav --format txt
-
-# Ver ajuda
-python src/transcribe.py --help
+# Only generate text file (faster)
+python src/transcribe.py meeting.mp3 --format txt
 ```
 
-### Opções de Linha de Comando
+### All Options Reference
 
-| Flag | Curto | Descrição | Padrão |
-|------|-------|-----------|--------|
-| `--model` | `-m` | Tamanho do modelo Whisper (tiny/base/small/medium/large-v3) | large-v3 |
-| `--language` | `-l` | Código do idioma (en, pt, etc.) ou auto-detectar | auto |
-| `--num-speakers` | `-n` | Número exato de speakers (se conhecido) | auto |
-| `--min-speakers` | | Mínimo de speakers esperado | - |
-| `--max-speakers` | | Máximo de speakers esperado | - |
-| `--output` | `-o` | Diretório de saída | data/transcripts |
-| `--format` | `-f` | Formato de saída (json/txt/md/all) | all |
-| `--device` | `-d` | Dispositivo de processamento (cpu/cuda/mps) | cpu |
-| `--verbose` | `-v` | Mostra logs e warnings detalhados | false |
-| `--mode` | | Modo de transcrição (fast/meeting/precise) | meeting |
-| `--ui-lang` | | Idioma da interface (en/pt) | auto |
-| `--notify` | | Enviar notificação macOS ao concluir | false |
-| `--vocab` | | Caminho para arquivo de vocabulário | - |
+<details>
+<summary>Click to expand full options table</summary>
 
-### Modos de Transcrição
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--model` | `-m` | AI model size (tiny/base/small/medium/large-v3) | large-v3 |
+| `--language` | `-l` | Audio language (en, pt, es, etc.) | auto-detect |
+| `--num-speakers` | `-n` | Exact number of speakers | auto-detect |
+| `--min-speakers` | | Minimum speakers expected | - |
+| `--max-speakers` | | Maximum speakers expected | - |
+| `--output` | `-o` | Where to save files | data/transcripts |
+| `--format` | `-f` | Output format (json/txt/md/all) | all |
+| `--mode` | | Transcription mode (fast/meeting/precise) | meeting |
+| `--device` | `-d` | Processor (cpu/cuda/mps) | cpu |
+| `--notify` | | macOS notification when done | off |
+| `--vocab` | | Custom vocabulary file | - |
+| `--ui-lang` | | Interface language (en/pt) | auto |
+| `--verbose` | `-v` | Show detailed logs | off |
 
-| Modo | Backend | Diarização | Velocidade | Uso |
-|------|---------|------------|------------|-----|
-| `fast` | MLX-Whisper | Não | 10-15x tempo real | Transcrição rápida, Apple Silicon |
-| `meeting` | WhisperX | Sim | Moderado | Padrão, reuniões com múltiplos speakers |
-| `precise` | Granite + pyannote | Sim | Mais lento | Alta precisão, gravações importantes |
+</details>
 
-```bash
-# Modo fast - transcrição rápida sem identificação de speakers
-python src/transcribe.py audio.wav --mode fast
+---
 
-# Modo meeting (padrão) - diarização completa
-python src/transcribe.py audio.wav --mode meeting
+## Output Formats
 
-# Modo precise - máxima precisão
-python src/transcribe.py audio.wav --mode precise
+### Text (.txt) — Human-readable
+```
+[00:00] SPEAKER_00: Good morning everyone.
+[00:05] SPEAKER_01: Thanks for joining.
 ```
 
-### Vocabulário Customizado
+### Markdown (.md) — Formatted for documents
+```markdown
+## Meeting Transcript
 
-Crie `vocab/default.txt` com termos específicos do domínio (carregado automaticamente se existir):
+**[00:00] Speaker 1:** Good morning everyone.
 
-```
-# Nomes de empresas
-PMDF
-FIAP
-
-# Termos técnicos
-API
-SDK
-Kubernetes
+**[00:05] Speaker 2:** Thanks for joining.
 ```
 
-Ou especifique um arquivo customizado:
-```bash
-python src/transcribe.py audio.wav --vocab termos_custom.txt
-```
-
-### Notificações
-
-Habilite notificações macOS para transcrições longas:
-```bash
-python src/transcribe.py reuniao_longa.wav --notify
-```
-
-### Formatos de Saída
-
-| Formato | Descrição | Uso |
-|---------|-----------|-----|
-| `json` | Completo com timestamps por palavra | Processamento por código/Claude |
-| `txt` | Texto simples com speakers | Leitura rápida |
-| `md` | Markdown formatado | Revisão/edição |
-| `all` | Todos os formatos acima (padrão) | Máxima flexibilidade |
-
-**Exemplo de saída (.txt):**
-```
-[00:00] SPEAKER_00: Bom dia a todos, vamos começar a reunião.
-
-[00:05] SPEAKER_01: Obrigado pela presença. Primeiro item da pauta...
-```
-
-### Estrutura do JSON
-
-O arquivo JSON contém dados detalhados para processamento programático:
-
+### JSON (.json) — For developers
 ```json
 {
   "segments": [
     {
-      "start": 0.5,
-      "end": 5.2,
-      "text": "Bom dia a todos, vamos começar a reunião.",
-      "speaker": "SPEAKER_00",
-      "words": [
-        {"word": "Bom", "start": 0.5, "end": 0.7, "score": 0.95, "speaker": "SPEAKER_00"}
-      ]
+      "start": 0.0,
+      "end": 4.2,
+      "text": "Good morning everyone.",
+      "speaker": "SPEAKER_00"
     }
   ],
   "metadata": {
-    "source_file": "reuniao.wav",
-    "language": "pt",
-    "model": "large-v3",
-    "num_speakers": 3
+    "language": "en",
+    "num_speakers": 2
   }
 }
 ```
 
-### Integração com Claude Code
+---
 
-Após a transcrição, use os prompts em `prompts/` para gerar documentos:
+## Model Selection
+
+Larger models are more accurate but slower and use more memory.
+
+| Model | Accuracy | Speed | RAM Needed | Recommended For |
+|-------|----------|-------|------------|-----------------|
+| tiny | Low | Very fast | 1GB | Testing only |
+| base | Medium | Fast | 1GB | Quick drafts |
+| small | Good | Moderate | 2GB | Daily use |
+| medium | Very good | Slow | 5GB | Important meetings |
+| **large-v3** | Excellent | Slower | 10GB | Production (default) |
 
 ```bash
-# 1. Transcrever áudio
-python src/transcribe.py data/audio/reuniao.wav
+# Use smaller model for testing
+python src/transcribe.py meeting.mp3 --model small
 
-# 2. No Claude Code, use um dos prompts:
+# Use largest model for important recordings
+python src/transcribe.py meeting.mp3 --model large-v3
 ```
-
-**Prompts disponíveis:**
-
-| Prompt | Descrição |
-|--------|-----------|
-| `prompts/ata_sei.md` | Ata formal para sistema SEI! |
-| `prompts/resumo_executivo.md` | Resumo executivo + plano de ação (5W2H) |
-
-**Exemplo:**
-```
-Leia data/transcripts/reuniao.txt e gere uma ATA DE REUNIÃO formal
-seguindo o padrão institucional brasileiro para o SEI!.
-
-[Cole o restante do prompt de prompts/ata_sei.md]
-```
-
-### Modelos Disponíveis
-
-| Modelo | Precisão | Velocidade | RAM |
-|--------|----------|------------|-----|
-| tiny | Baixa | Muito rápido | 1GB |
-| base | Média | Rápido | 1GB |
-| small | Boa | Moderado | 2GB |
-| medium | Muito boa | Lento | 5GB |
-| large-v3 | Excelente | Mais lento | 10GB |
-
-**Recomendação:** Começar com `small` para testes, usar `large-v3` para produção.
 
 ---
 
 ## Troubleshooting
 
-### Error: "No module named 'whisperx'"
-```bash
-source venv/bin/activate  # Activate virtual environment
-pip install whisperx
-```
+<details>
+<summary><strong>Error: "No module named 'whisperx'"</strong></summary>
 
-### Memory error
+Your virtual environment isn't activated.
+
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+```
+</details>
+
+<details>
+<summary><strong>Out of memory error</strong></summary>
+
 Use a smaller model:
+
 ```bash
-python src/transcribe.py audio.wav --model small
+python src/transcribe.py audio.mp3 --model small
+```
+</details>
+
+<details>
+<summary><strong>Speakers not identified correctly</strong></summary>
+
+Tell the system how many speakers:
+
+```bash
+python src/transcribe.py audio.mp3 --num-speakers 3
+```
+</details>
+
+<details>
+<summary><strong>Wrong language detected</strong></summary>
+
+Specify the language explicitly:
+
+```bash
+python src/transcribe.py audio.mp3 --language pt
+```
+</details>
+
+<details>
+<summary><strong>Slow transcription</strong></summary>
+
+- Use `--mode fast` for speed (no speaker identification)
+- Use `--model small` for faster processing
+- Close other applications to free up memory
+</details>
+
+<details>
+<summary><strong>HuggingFace authentication error</strong></summary>
+
+1. Check your token in `.env` file
+2. Make sure you accepted terms for both pyannote models
+3. Verify token at [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+</details>
+
+---
+
+## Privacy & Security
+
+**Your data stays on your computer.**
+
+- All processing happens locally — no audio is uploaded anywhere
+- No internet connection needed after initial setup
+- Models are downloaded once and stored locally
+- No telemetry, analytics, or data collection
+
+This makes Meeting Transcriber ideal for:
+- Confidential business meetings
+- Medical consultations
+- Legal proceedings
+- Personal recordings
+
+---
+
+## Custom Vocabulary
+
+Improve accuracy for domain-specific terms:
+
+```bash
+# Create vocab/default.txt with your terms (one per line):
+ACME Corporation
+Dr. Smith
+Kubernetes
+API
 ```
 
-### Incorrect diarization
-Specify the number of speakers:
+The system automatically loads `vocab/default.txt` if it exists, or specify a custom file:
+
 ```bash
-python src/transcribe.py audio.wav --num-speakers 3
+python src/transcribe.py meeting.mp3 --vocab my-terms.txt
 ```
 
-### Want to see detailed logs?
-Use verbose mode to debug issues:
+---
+
+## Integration with Claude
+
+After transcription, use AI to generate meeting minutes:
+
 ```bash
-python src/transcribe.py audio.wav --verbose
+# 1. Transcribe
+python src/transcribe.py meeting.mp3
+
+# 2. Ask Claude to process the transcript
+# See prompts/ folder for templates:
+#   - prompts/ata_sei.md — Formal meeting minutes (Brazilian SEI! format)
+#   - prompts/resumo_executivo.md — Executive summary with action items
 ```
+
+---
+
+## Acknowledgments
+
+Built with these excellent open-source projects:
+
+- [WhisperX](https://github.com/m-bain/whisperX) — Speech recognition with word-level timestamps
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — Optimized Whisper inference
+- [pyannote.audio](https://github.com/pyannote/pyannote-audio) — Speaker diarization
+- [MLX](https://github.com/ml-explore/mlx) — Apple Silicon ML framework
 
 ---
 
 ## License
 
-Educational project for personal use.
+MIT License — free for personal and commercial use.
 
 ---
 
-*Author: Iuri Almeida*
+## Author
+
+**Iuri Almeida**
+Medical Doctor | Public Safety Manager | Computer Science Student
+
 *January 2026*
