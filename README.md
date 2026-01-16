@@ -160,6 +160,23 @@ The default installation covers most needs. For specialized use cases:
 pip install mlx-whisper transformers accelerate
 ```
 
+<details>
+<summary><strong>Low RAM? Use the smaller Granite model</strong></summary>
+
+The default Granite model (8B) requires ~16GB RAM. For machines with less memory, use the 2B model (~6GB RAM):
+
+```bash
+# Add to your .env file:
+GRANITE_MODEL=ibm-granite/granite-speech-3.3-2b
+```
+
+| Model | Parameters | RAM Required | Accuracy |
+|-------|------------|--------------|----------|
+| granite-speech-3.3-8b | 8 billion | ~16GB | Higher |
+| granite-speech-3.3-2b | 2 billion | ~6GB | Good |
+
+</details>
+
 ---
 
 ## Usage Guide

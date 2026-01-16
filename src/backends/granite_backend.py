@@ -17,20 +17,27 @@ class GraniteBackend(TranscriptionBackend):
     Requirements: transformers, accelerate, pyannote.audio
     """
 
+    # Available Granite Speech models
+    MODEL_8B = "ibm-granite/granite-speech-3.3-8b"  # ~16GB RAM
+    MODEL_2B = "ibm-granite/granite-speech-3.3-2b"  # ~6GB RAM
+
     def __init__(
         self,
-        model_name: str = "ibm-granite/granite-speech-3.3-8b",
+        model_name: str | None = None,
         device: str = "cpu",
         hf_token: str | None = None,
     ):
         """Initialize Granite backend.
 
         Args:
-            model_name: HuggingFace model name.
+            model_name: HuggingFace model name. If None, uses GRANITE_MODEL
+                       env var or defaults to 8B model.
             device: Processing device (cpu, cuda, mps).
             hf_token: HuggingFace token for pyannote.
         """
-        self.model_name = model_name
+        # Allow override via environment variable
+        default_model = os.getenv("GRANITE_MODEL", self.MODEL_8B)
+        self.model_name = model_name or default_model
         self.device = device
         self._hf_token = hf_token
 
