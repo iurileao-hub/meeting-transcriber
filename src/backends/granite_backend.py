@@ -17,27 +17,27 @@ class GraniteBackend(TranscriptionBackend):
     Requirements: transformers, accelerate, pyannote.audio
     """
 
-    # Available Granite Speech models
-    MODEL_8B = "ibm-granite/granite-speech-3.3-8b"  # ~16GB RAM
-    MODEL_2B = "ibm-granite/granite-speech-3.3-2b"  # ~6GB RAM
+    # Default Granite Speech model (requires ~16GB RAM)
+    DEFAULT_MODEL = "ibm-granite/granite-speech-3.3-8b"
 
     def __init__(
         self,
-        model_name: str | None = None,
+        model_name: str = DEFAULT_MODEL,
         device: str = "cpu",
         hf_token: str | None = None,
     ):
         """Initialize Granite backend.
 
         Args:
-            model_name: HuggingFace model name. If None, uses GRANITE_MODEL
-                       env var or defaults to 8B model.
+            model_name: HuggingFace model name.
             device: Processing device (cpu, cuda, mps).
             hf_token: HuggingFace token for pyannote.
+
+        Note:
+            Granite 8B requires ~16GB RAM. For machines with less memory,
+            use --mode meeting (WhisperX) instead.
         """
-        # Allow override via environment variable
-        default_model = os.getenv("GRANITE_MODEL", self.MODEL_8B)
-        self.model_name = model_name or default_model
+        self.model_name = model_name
         self.device = device
         self._hf_token = hf_token
 
@@ -103,20 +103,25 @@ class GraniteBackend(TranscriptionBackend):
         if not self.is_available():
             raise ImportError(
                 "transformers not installed.\n"
-                "Install with: pip install transformers accelerate"
+                "Install with: pip install transformers accelerate torchaudio"
             )
 
         from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
         import torch
+        import torchaudio
 
         # Stage 1: Load Granite model
         if progress_callback:
             progress_callback("loading", 0)
 
         processor = AutoProcessor.from_pretrained(self.model_name)
+        tokenizer = processor.tokenizer
+
+        # Use bfloat16 for better compatibility, float32 for CPU
+        dtype = torch.float32 if self.device == "cpu" else torch.bfloat16
         model = AutoModelForSpeechSeq2Seq.from_pretrained(
             self.model_name,
-            torch_dtype=torch.float16 if self.device != "cpu" else torch.float32,
+            torch_dtype=dtype,
             low_cpu_mem_usage=True,
         )
         model.to(self.device)
@@ -128,29 +133,64 @@ class GraniteBackend(TranscriptionBackend):
         if progress_callback:
             progress_callback("transcribing", 0)
 
-        import librosa
-        audio_array, sr = librosa.load(audio_path, sr=16000)
+        # Load audio with torchaudio (Granite requires mono 16kHz)
+        wav, sr = torchaudio.load(audio_path)
 
-        inputs = processor(
-            audio_array,
-            sampling_rate=16000,
-            return_tensors="pt",
+        # Convert to mono if stereo
+        if wav.shape[0] > 1:
+            wav = wav.mean(dim=0, keepdim=True)
+
+        # Resample to 16kHz if needed
+        if sr != 16000:
+            resampler = torchaudio.transforms.Resample(sr, 16000)
+            wav = resampler(wav)
+            sr = 16000
+
+        # Normalize audio
+        wav = wav / wav.abs().max()
+
+        audio_duration = wav.shape[1] / sr
+
+        # Granite uses a chat-based interface with audio
+        system_prompt = "You are a helpful AI assistant for transcription."
+        user_prompt = "<|audio|>Transcribe the speech into written text."
+
+        chat = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        prompt = tokenizer.apply_chat_template(
+            chat, tokenize=False, add_generation_prompt=True
         )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
+        # Process audio + text together
+        model_inputs = processor(
+            prompt, wav, device=self.device, return_tensors="pt"
+        ).to(self.device)
+
+        # Generate transcription
         with torch.no_grad():
-            generated_ids = model.generate(**inputs, max_new_tokens=448)
+            model_outputs = model.generate(
+                **model_inputs,
+                max_new_tokens=448,
+                do_sample=False,
+                num_beams=1,
+            )
 
-        transcription = processor.batch_decode(
-            generated_ids,
+        # Extract only the new tokens (skip input tokens)
+        num_input_tokens = model_inputs["input_ids"].shape[-1]
+        new_tokens = model_outputs[0, num_input_tokens:]
+
+        transcription = tokenizer.decode(
+            new_tokens,
             skip_special_tokens=True,
-        )[0]
+        ).strip()
 
         if progress_callback:
             progress_callback("transcribing", 100)
 
         # Free Granite model memory
-        del model, processor
+        del model, processor, tokenizer
         gc.collect()
 
         # Stage 3: Diarize with pyannote
@@ -189,7 +229,7 @@ class GraniteBackend(TranscriptionBackend):
         # For now, create a single segment (Granite doesn't provide timestamps)
         segments = [{
             "start": 0,
-            "end": len(audio_array) / sr,
+            "end": audio_duration,
             "text": transcription.strip(),
             "speaker": "SPEAKER_00",  # Basic assignment
         }]
