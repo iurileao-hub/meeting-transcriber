@@ -1,5 +1,7 @@
 """Progress reporting for transcription pipeline."""
 import sys
+import threading
+import time
 from enum import Enum
 
 
@@ -21,11 +23,37 @@ class Stage(Enum):
         return self._labels.get(lang, self._labels["en"])
 
 
+SPINNER_CHARS = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+
+def format_duration(seconds: float) -> str:
+    """Format seconds into human-readable duration string.
+
+    Args:
+        seconds: Duration in seconds.
+
+    Returns:
+        Formatted string like '1m23s', '45s', or '2h05m'.
+    """
+    if seconds < 0:
+        return "---"
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    if hours > 0:
+        return f"{hours}h{minutes:02d}m"
+    if minutes > 0:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"
+
+
 class ProgressReporter:
     """Reports progress during transcription.
 
-    Displays progress like:
-        [2/4] Transcribing... [████████░░░░] 65%
+    Displays progress with a live spinner and elapsed timer:
+        [2/5] Transcribing... [████████░░░░] 65%  1m23s | ~1m remaining
+    When no percentage updates arrive, the spinner and timer keep moving
+    to show the process is still alive.
     """
 
     def __init__(self, total_stages: int, lang: str = "en", width: int = 20):
@@ -40,12 +68,107 @@ class ProgressReporter:
         self.lang = lang
         self.width = width
         self.current_stage = 1
+        # Capture real stdout before SuppressOutput can replace it
+        self._stdout = sys.stdout
+        # Timing
+        self._start_time = time.monotonic()
+        self._stage_start_time = self._start_time
+        # Spinner state
+        self._spinner_idx = 0
+        self._current_stage: Stage | None = None
+        self._current_percent: float = 0
+        self._lock = threading.Lock()
+        self._ticker_stop = threading.Event()
+        self._ticker_thread: threading.Thread | None = None
+
+    def _start_ticker(self) -> None:
+        """Start background thread that refreshes display every 500ms."""
+        if self._ticker_thread is not None and self._ticker_thread.is_alive():
+            return
+        self._ticker_stop.clear()
+        self._ticker_thread = threading.Thread(target=self._tick_loop, daemon=True)
+        self._ticker_thread.start()
+
+    def _stop_ticker(self) -> None:
+        """Stop the background ticker thread."""
+        self._ticker_stop.set()
+        if self._ticker_thread is not None:
+            self._ticker_thread.join(timeout=1)
+            self._ticker_thread = None
+
+    def _tick_loop(self) -> None:
+        """Background loop: refresh display to update spinner and timer."""
+        while not self._ticker_stop.is_set():
+            try:
+                with self._lock:
+                    if self._current_stage is not None:
+                        self._render()
+            except (ValueError, OSError):
+                # stdout was closed (e.g., in tests), stop silently
+                break
+            self._ticker_stop.wait(0.25)
 
     def _render_bar(self, percent: float) -> str:
         """Render progress bar."""
         filled = int(self.width * percent / 100)
         empty = self.width - filled
         return f"[{'█' * filled}{'░' * empty}]"
+
+    def _estimate_remaining(self, percent: float) -> float | None:
+        """Estimate remaining seconds for current stage.
+
+        Args:
+            percent: Current progress percentage (0-100).
+
+        Returns:
+            Estimated remaining seconds, or None if not enough data.
+        """
+        if percent <= 0:
+            return None
+        elapsed = time.monotonic() - self._stage_start_time
+        if elapsed < 2:
+            return None
+        total_estimated = elapsed / (percent / 100)
+        return total_estimated - elapsed
+
+    def _format_time_info(self, percent: float) -> str:
+        """Format elapsed time and ETA string.
+
+        Args:
+            percent: Current progress percentage (0-100).
+
+        Returns:
+            Formatted time info string.
+        """
+        elapsed = time.monotonic() - self._start_time
+        elapsed_str = format_duration(elapsed)
+
+        remaining = self._estimate_remaining(percent)
+        if remaining is not None and percent < 100:
+            remaining_str = format_duration(remaining)
+            if self.lang == "pt":
+                return f"{elapsed_str} | ~{remaining_str} restante"
+            return f"{elapsed_str} | ~{remaining_str} remaining"
+
+        return elapsed_str
+
+    def _render(self) -> None:
+        """Render the current progress line to stdout. Must be called with lock held."""
+        stage = self._current_stage
+        percent = self._current_percent
+        spinner = SPINNER_CHARS[self._spinner_idx % len(SPINNER_CHARS)]
+        self._spinner_idx += 1
+
+        label = stage.label(self.lang)
+        bar = self._render_bar(percent)
+        time_info = self._format_time_info(percent)
+        # Pad with spaces to clear previous longer lines
+        line = (
+            f"\r{spinner} [{self.current_stage}/{self.total_stages}] "
+            f"{label}... {bar} {percent:.0f}%  {time_info}    "
+        )
+        self._stdout.write(line)
+        self._stdout.flush()
 
     def update(self, stage: Stage, percent: float) -> None:
         """Update progress display.
@@ -54,17 +177,18 @@ class ProgressReporter:
             stage: Current pipeline stage.
             percent: Progress percentage (0-100).
         """
-        label = stage.label(self.lang)
-        bar = self._render_bar(percent)
-        line = f"\r[{self.current_stage}/{self.total_stages}] {label}... {bar} {percent:.0f}%"
-        sys.stdout.write(line)
-        sys.stdout.flush()
+        with self._lock:
+            self._current_stage = stage
+            self._current_percent = percent
+            self._render()
+        self._start_ticker()
 
     def advance(self) -> None:
         """Move to next stage."""
+        self._stop_ticker()
         self.current_stage += 1
-        # New line after completing a stage
-        print()
+        self._stage_start_time = time.monotonic()
+        print(file=self._stdout)
 
     def complete(self, output_path: str, duration_seconds: float) -> None:
         """Show completion message.
@@ -73,20 +197,15 @@ class ProgressReporter:
             output_path: Path to output file.
             duration_seconds: Total duration in seconds.
         """
-        print()  # New line after progress bar
+        self._stop_ticker()
+        print(file=self._stdout)
 
-        # Format duration
-        minutes = int(duration_seconds // 60)
-        seconds = int(duration_seconds % 60)
-        if minutes > 0:
-            duration_str = f"{minutes}m{seconds:02d}s"
-        else:
-            duration_str = f"{seconds}s"
+        duration_str = format_duration(duration_seconds)
 
         if self.lang == "pt":
-            print(f"✓ Transcrição completa: {output_path} ({duration_str})")
+            print(f"✓ Transcrição completa: {output_path} ({duration_str})", file=self._stdout)
         else:
-            print(f"✓ Transcription complete: {output_path} ({duration_str})")
+            print(f"✓ Transcription complete: {output_path} ({duration_str})", file=self._stdout)
 
     def error(self, message: str) -> None:
         """Show error message.
@@ -94,7 +213,8 @@ class ProgressReporter:
         Args:
             message: Error message to display.
         """
-        print()  # New line after progress bar
+        self._stop_ticker()
+        print(file=self._stdout)
         if self.lang == "pt":
             print(f"✗ Erro: {message}", file=sys.stderr)
         else:

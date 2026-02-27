@@ -259,7 +259,7 @@ seguindo o template em examples/meeting_minutes.md
 - ✅ Testes unitários (148 testes)
 - ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
 - ✅ **[Fase 3]** Interface bilíngue (en/pt)
-- ✅ **[Fase 3]** Barra de progresso
+- ✅ **[Fase 3]** Barra de progresso com spinner animado, timer e ETA
 - ✅ **[Fase 3]** Notificações macOS
 - ✅ **[Fase 3]** Vocabulário customizado
 - ✅ **[Fase 3]** Normalização de texto
@@ -289,6 +289,13 @@ Revisão de código realizada em Janeiro 2026:
 - ✅ PLAN.md movido para `docs/DEVELOPMENT_HISTORY.md`
 - ✅ README.md e CLAUDE.md consolidados como documentação principal
 
+### Progresso em Tempo Real (Fevereiro 2026)
+- ✅ Fix: barra de progresso agora visível (antes era engolida pelo SuppressOutput)
+- ✅ Spinner animado (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) via background thread para indicar atividade
+- ✅ Timer de tempo decorrido atualizado em tempo real
+- ✅ Estimativa de tempo restante (ETA) por etapa
+- ✅ Bilíngue (pt/en) para todas as mensagens de progresso
+
 ---
 
-*Última atualização: 16 de Janeiro de 2026 (v1.0 - Production Ready)*
+*Última atualização: 27 de Fevereiro de 2026*
