@@ -1,6 +1,8 @@
 """WhisperX backend for meeting mode (with diarization)."""
+import builtins
 import gc
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -117,7 +119,29 @@ class WhisperXBackend(TranscriptionBackend):
             progress_callback("transcribing", 0)
 
         audio = whisperx.load_audio(audio_path)
-        result = model.transcribe(audio, batch_size=self.batch_size)
+
+        # Intercept builtins.print to capture whisperX progress output
+        _original_print = builtins.print
+        _progress_re = re.compile(r"Progress:\s*([\d.]+)%")
+
+        def _progress_interceptor(*args, **kwargs):
+            if args and isinstance(args[0], str):
+                match = _progress_re.search(args[0])
+                if match:
+                    pct = float(match.group(1))
+                    if progress_callback:
+                        progress_callback("transcribing", min(pct, 99))
+                    return
+            _original_print(*args, **kwargs)
+
+        builtins.print = _progress_interceptor
+        try:
+            result = model.transcribe(
+                audio, batch_size=self.batch_size, print_progress=True
+            )
+        finally:
+            builtins.print = _original_print
+
         detected_language = result.get("language", language or "unknown")
 
         if progress_callback:
