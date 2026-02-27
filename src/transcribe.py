@@ -428,8 +428,8 @@ def transcribe(
     except ValueError as e:
         raise TranscriptionError(translator("messages.invalid_mode")) from e
 
-    # Determine number of stages based on backend capabilities
-    total_stages = 5 if backend.supports_diarization else 3
+    # Determine number of stages from backend
+    total_stages = backend.total_stages
 
     if progress is None:
         progress = ProgressReporter(total_stages=total_stages, lang=ui_lang)
@@ -440,6 +440,7 @@ def transcribe(
     # Create progress callback for backend
     stage_map = {
         "loading": Stage.LOADING,
+        "vad": Stage.VAD,
         "transcribing": Stage.TRANSCRIBING,
         "aligning": Stage.ALIGNING,
         "diarizing": Stage.DIARIZING,

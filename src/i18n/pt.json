@@ -1,6 +1,7 @@
 {
   "stages": {
     "loading": "Carregando modelo",
+    "vad": "Detectando fala",
     "transcribing": "Transcrevendo",
     "aligning": "Alinhando",
     "diarizing": "Diarizando",

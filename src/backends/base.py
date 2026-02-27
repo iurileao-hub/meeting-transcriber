@@ -1,7 +1,8 @@
 """Base class for transcription backends."""
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
 
 
 @dataclass
@@ -55,6 +56,51 @@ class TranscriptionBackend(ABC):
         pass
 
     @property
+    @abstractmethod
+    def total_stages(self) -> int:
+        """Total number of progress stages for this backend."""
+        pass
+
+    @property
     def name(self) -> str:
         """Human-readable backend name."""
         return self.__class__.__name__.replace("Backend", "")
+
+
+@contextmanager
+def pyannote_progress_hook(
+    progress_callback: Callable[[str, float], None] | None,
+    stage_name: str,
+):
+    """Patch Inference.slide to inject progress hook for pyannote operations.
+
+    Monkey-patches pyannote's Inference.slide method to intercept the
+    hook(completed, total) calls and forward them to progress_callback.
+
+    Args:
+        progress_callback: Callback(stage_name, percent) or None.
+        stage_name: Stage name to report (e.g., 'vad', 'diarizing').
+    """
+    if not progress_callback:
+        yield
+        return
+
+    from pyannote.audio.core.inference import Inference
+
+    original_slide = Inference.slide
+
+    def slide_with_hook(self, waveform, sample_rate, hook=None):
+        def our_hook(completed, total):
+            if total > 0:
+                pct = (completed / total) * 99
+                progress_callback(stage_name, min(pct, 99))
+            if hook:
+                hook(completed, total)
+
+        return original_slide(self, waveform, sample_rate, hook=our_hook)
+
+    Inference.slide = slide_with_hook
+    try:
+        yield
+    finally:
+        Inference.slide = original_slide

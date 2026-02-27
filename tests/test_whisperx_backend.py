@@ -1,8 +1,10 @@
 """Tests for WhisperX backend."""
 import builtins
 import sys
+from contextlib import nullcontext
 import pytest
 from unittest.mock import Mock, patch, MagicMock
+from src.backends.base import pyannote_progress_hook
 from src.backends.whisperx_backend import WhisperXBackend
 
 
@@ -89,6 +91,16 @@ class TestWhisperXBackendHFToken:
 class TestWhisperXBackendTranscribe:
     """Test transcription functionality with mocked whisperx."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_pyannote_hook(self):
+        """Patch pyannote_progress_hook to avoid importing real pyannote.
+        The hook is tested separately in TestPyannoteProgressHook."""
+        with patch(
+            "src.backends.whisperx_backend.pyannote_progress_hook",
+            side_effect=lambda cb, stage: nullcontext(),
+        ):
+            yield
+
     def test_transcribe_returns_result(self):
         """Test that transcribe returns TranscriptionResult."""
         # Create a mock whisperx module
@@ -132,7 +144,7 @@ class TestWhisperXBackendTranscribe:
             assert result.metadata["backend"] == "whisperx"
 
     def test_transcribe_with_progress_callback(self):
-        """Test that progress callback is called at each stage."""
+        """Test that progress callback is called at each stage including vad."""
         mock_whisperx = MagicMock()
         mock_model = MagicMock()
         mock_model.transcribe.return_value = {
@@ -164,6 +176,7 @@ class TestWhisperXBackendTranscribe:
             # Verify callback was called for each stage
             stages = [call[0][0] for call in callback.call_args_list]
             assert "loading" in stages
+            assert "vad" in stages
             assert "transcribing" in stages
             assert "aligning" in stages
             assert "diarizing" in stages
@@ -235,6 +248,15 @@ class TestWhisperXBackendTranscribe:
 class TestWhisperXProgressInterception:
     """Test print_progress interception for granular transcription progress."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_pyannote_hook(self):
+        """Patch pyannote_progress_hook to avoid importing real pyannote."""
+        with patch(
+            "src.backends.whisperx_backend.pyannote_progress_hook",
+            side_effect=lambda cb, stage: nullcontext(),
+        ):
+            yield
+
     def _make_mocks(self, print_side_effect=None):
         """Create standard whisperx mocks. Optionally inject side_effect on transcribe."""
         mock_whisperx = MagicMock()
@@ -291,8 +313,7 @@ class TestWhisperXProgressInterception:
                 for call in callback.call_args_list
                 if call[0][0] == "transcribing"
             ]
-            # Should have: 0, 25, 50, 75, 100
-            assert 0 in transcribing_calls
+            # Should have: 25, 50, 75, 100 (0% now emitted as "vad" stage)
             assert 25.0 in transcribing_calls
             assert 50.0 in transcribing_calls
             assert 75.0 in transcribing_calls
@@ -403,3 +424,114 @@ class TestWhisperXProgressInterception:
             final = [c for c in transcribing_calls if c[1] == 100]
             assert len(intercepted) == 1
             assert len(final) == 1
+
+
+class TestPyannoteProgressHook:
+    """Test pyannote_progress_hook context manager."""
+
+    def test_hook_injects_and_restores_slide(self):
+        """Test that Inference.slide is patched inside and restored after."""
+        # Create mock Inference class
+        mock_inference_module = MagicMock()
+        original_slide = MagicMock()
+        mock_inference_module.Inference.slide = original_slide
+
+        callback = MagicMock()
+
+        with patch.dict(
+            sys.modules,
+            {"pyannote": MagicMock(), "pyannote.audio": MagicMock(),
+             "pyannote.audio.core": MagicMock(),
+             "pyannote.audio.core.inference": mock_inference_module},
+        ):
+            with pyannote_progress_hook(callback, "vad"):
+                # Inside: slide should be patched (different from original)
+                assert mock_inference_module.Inference.slide is not original_slide
+
+            # Outside: slide should be restored
+            assert mock_inference_module.Inference.slide is original_slide
+
+    def test_hook_restores_on_exception(self):
+        """Test that Inference.slide is restored even if body raises."""
+        mock_inference_module = MagicMock()
+        original_slide = MagicMock()
+        mock_inference_module.Inference.slide = original_slide
+
+        callback = MagicMock()
+
+        with patch.dict(
+            sys.modules,
+            {"pyannote": MagicMock(), "pyannote.audio": MagicMock(),
+             "pyannote.audio.core": MagicMock(),
+             "pyannote.audio.core.inference": mock_inference_module},
+        ):
+            with pytest.raises(RuntimeError):
+                with pyannote_progress_hook(callback, "vad"):
+                    raise RuntimeError("test error")
+
+            # Must be restored despite exception
+            assert mock_inference_module.Inference.slide is original_slide
+
+    def test_hook_noop_when_no_callback(self):
+        """Test that no patching occurs when callback is None."""
+        # Should not even try to import pyannote
+        with pyannote_progress_hook(None, "vad"):
+            pass  # Should work without error
+
+    def test_hook_forwards_progress_to_callback(self):
+        """Test that the injected hook calls progress_callback with correct values."""
+        mock_inference_module = MagicMock()
+
+        # Make original_slide call the hook it receives
+        def fake_slide(self, waveform, sample_rate, hook=None):
+            if hook:
+                hook(5, 10)  # 50% progress
+                hook(10, 10)  # 100% progress
+            return "result"
+
+        mock_inference_module.Inference.slide = fake_slide
+
+        callback = MagicMock()
+
+        with patch.dict(
+            sys.modules,
+            {"pyannote": MagicMock(), "pyannote.audio": MagicMock(),
+             "pyannote.audio.core": MagicMock(),
+             "pyannote.audio.core.inference": mock_inference_module},
+        ):
+            with pyannote_progress_hook(callback, "vad"):
+                patched_slide = mock_inference_module.Inference.slide
+                # Simulate calling the patched slide
+                patched_slide(None, "waveform", 16000)
+
+        # 5/10 = 50% -> 49.5 (capped at 99)
+        # 10/10 = 100% -> 99 (capped at 99)
+        calls = callback.call_args_list
+        assert len(calls) == 2
+        assert calls[0][0] == ("vad", 49.5)
+        assert calls[1][0] == ("vad", 99)
+
+    def test_hook_caps_at_99(self):
+        """Test that progress is capped at 99%."""
+        mock_inference_module = MagicMock()
+
+        def fake_slide(self, waveform, sample_rate, hook=None):
+            if hook:
+                hook(10, 10)  # 100% -> should be capped to 99
+            return "result"
+
+        mock_inference_module.Inference.slide = fake_slide
+
+        callback = MagicMock()
+
+        with patch.dict(
+            sys.modules,
+            {"pyannote": MagicMock(), "pyannote.audio": MagicMock(),
+             "pyannote.audio.core": MagicMock(),
+             "pyannote.audio.core.inference": mock_inference_module},
+        ):
+            with pyannote_progress_hook(callback, "diarizing"):
+                patched_slide = mock_inference_module.Inference.slide
+                patched_slide(None, "waveform", 16000)
+
+        callback.assert_called_once_with("diarizing", 99)

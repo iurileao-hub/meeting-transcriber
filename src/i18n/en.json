@@ -1,6 +1,7 @@
 {
   "stages": {
     "loading": "Loading model",
+    "vad": "Detecting speech",
     "transcribing": "Transcribing",
     "aligning": "Aligning",
     "diarizing": "Diarizing",

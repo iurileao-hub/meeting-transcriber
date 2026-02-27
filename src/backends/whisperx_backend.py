@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .base import TranscriptionBackend, TranscriptionResult
+from .base import TranscriptionBackend, TranscriptionResult, pyannote_progress_hook
 
 
 class WhisperXBackend(TranscriptionBackend):
@@ -73,6 +73,10 @@ class WhisperXBackend(TranscriptionBackend):
     def supports_diarization(self) -> bool:
         return True
 
+    @property
+    def total_stages(self) -> int:
+        return 6  # loading → vad → transcribing → aligning → diarizing → saving
+
     def transcribe(
         self,
         audio_path: str,
@@ -114,9 +118,9 @@ class WhisperXBackend(TranscriptionBackend):
         if progress_callback:
             progress_callback("loading", 100)
 
-        # Stage 2: Transcribe
+        # Stage 2: VAD + Transcribe (VAD runs inside model.transcribe)
         if progress_callback:
-            progress_callback("transcribing", 0)
+            progress_callback("vad", 0)
 
         audio = whisperx.load_audio(audio_path)
 
@@ -134,13 +138,15 @@ class WhisperXBackend(TranscriptionBackend):
                     return
             _original_print(*args, **kwargs)
 
-        builtins.print = _progress_interceptor
-        try:
-            result = model.transcribe(
-                audio, batch_size=self.batch_size, print_progress=True
-            )
-        finally:
-            builtins.print = _original_print
+        # VAD progress via pyannote hook, then transcription via print interception
+        with pyannote_progress_hook(progress_callback, "vad"):
+            builtins.print = _progress_interceptor
+            try:
+                result = model.transcribe(
+                    audio, batch_size=self.batch_size, print_progress=True
+                )
+            finally:
+                builtins.print = _original_print
 
         detected_language = result.get("language", language or "unknown")
 
@@ -194,7 +200,8 @@ class WhisperXBackend(TranscriptionBackend):
         if max_speakers:
             diarize_kwargs["max_speakers"] = max_speakers
 
-        diarize_segments = diarize_model(audio, **diarize_kwargs)
+        with pyannote_progress_hook(progress_callback, "diarizing"):
+            diarize_segments = diarize_model(audio, **diarize_kwargs)
         result = whisperx.assign_word_speakers(diarize_segments, result)
 
         if progress_callback:

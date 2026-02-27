@@ -256,7 +256,7 @@ seguindo o template em examples/meeting_minutes.md
 - ✅ Tratamento de erros com mensagens úteis
 - ✅ Otimização de performance (compute_type, batch_size)
 - ✅ Liberação de memória após cada etapa
-- ✅ Testes unitários (153 testes)
+- ✅ Testes unitários (165 testes)
 - ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
 - ✅ **[Fase 3]** Interface bilíngue (en/pt)
 - ✅ **[Fase 3]** Barra de progresso com spinner animado, timer e ETA
@@ -283,7 +283,7 @@ Revisão de código realizada em Janeiro 2026:
 
 ### Arquitetura
 - ✅ Factory pattern corrigido para passar configuração aos backends
-- ✅ Testes expandidos para cobrir Granite backend (153 testes total)
+- ✅ Testes expandidos para cobrir Granite backend (165 testes total)
 
 ### Documentação
 - ✅ PLAN.md movido para `docs/DEVELOPMENT_HISTORY.md`
@@ -296,6 +296,9 @@ Revisão de código realizada em Janeiro 2026:
 - ✅ Estimativa de tempo restante (ETA) por etapa
 - ✅ Bilíngue (pt/en) para todas as mensagens de progresso
 - ✅ Progresso granular na etapa de transcrição (intercepta print_progress do whisperX)
+- ✅ Progresso granular para VAD e diarização via monkey-patch do pyannote `Inference.slide`
+- ✅ Nova etapa "Detectando fala" (VAD) visível na barra de progresso
+- ✅ Contagem de stages dinâmica via `backend.total_stages` (WhisperX=6, Granite=4, MLX=3)
 
 ---
 

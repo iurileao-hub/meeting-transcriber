@@ -13,6 +13,12 @@ class TestStage:
     def test_stage_has_portuguese_label(self):
         assert Stage.LOADING.label("pt") == "Carregando modelo"
 
+    def test_vad_stage_english(self):
+        assert Stage.VAD.label("en") == "Detecting speech"
+
+    def test_vad_stage_portuguese(self):
+        assert Stage.VAD.label("pt") == "Detectando fala"
+
     def test_all_stages_have_labels(self):
         for stage in Stage:
             assert stage.label("en") is not None

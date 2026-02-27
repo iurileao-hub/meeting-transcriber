@@ -9,6 +9,7 @@ class Stage(Enum):
     """Transcription pipeline stages."""
 
     LOADING = ("loading", "Loading model", "Carregando modelo")
+    VAD = ("vad", "Detecting speech", "Detectando fala")
     TRANSCRIBING = ("transcribing", "Transcribing", "Transcrevendo")
     ALIGNING = ("aligning", "Aligning", "Alinhando")
     DIARIZING = ("diarizing", "Diarizing", "Diarizando")

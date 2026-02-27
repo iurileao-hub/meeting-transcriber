@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .base import TranscriptionBackend, TranscriptionResult
+from .base import TranscriptionBackend, TranscriptionResult, pyannote_progress_hook
 
 
 class GraniteBackend(TranscriptionBackend):
@@ -78,6 +78,10 @@ class GraniteBackend(TranscriptionBackend):
     @property
     def supports_diarization(self) -> bool:
         return True  # Via separate pyannote pipeline
+
+    @property
+    def total_stages(self) -> int:
+        return 4  # loading → transcribing → diarizing → saving
 
     def transcribe(
         self,
@@ -229,7 +233,8 @@ class GraniteBackend(TranscriptionBackend):
         if max_speakers:
             diarize_kwargs["max_speakers"] = max_speakers
 
-        diarize_segments = diarize_model(audio, **diarize_kwargs)
+        with pyannote_progress_hook(progress_callback, "diarizing"):
+            diarize_segments = diarize_model(audio, **diarize_kwargs)
 
         if progress_callback:
             progress_callback("diarizing", 100)

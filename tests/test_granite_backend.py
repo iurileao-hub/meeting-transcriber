@@ -299,6 +299,14 @@ class TestAudioProcessingEdgeCases:
         assert needs_resampling is False
 
 
+class TestGraniteBackendTotalStages:
+    """Test total_stages property."""
+
+    def test_total_stages_is_4(self):
+        backend = GraniteBackend()
+        assert backend.total_stages == 4
+
+
 class TestBackendIntegration:
     """Integration tests for backend factory."""
 

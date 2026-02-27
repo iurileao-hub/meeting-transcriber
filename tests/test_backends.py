@@ -32,6 +32,10 @@ class TestTranscriptionBackend:
             def supports_diarization(self) -> bool:
                 return False
 
+            @property
+            def total_stages(self) -> int:
+                return 3
+
         with pytest.raises(TypeError):
             IncompleteBackend()
 
@@ -39,6 +43,22 @@ class TestTranscriptionBackend:
         class IncompleteBackend(TranscriptionBackend):
             def transcribe(self, audio_path, **kwargs):
                 pass
+
+            @property
+            def total_stages(self) -> int:
+                return 3
+
+        with pytest.raises(TypeError):
+            IncompleteBackend()
+
+    def test_subclass_must_implement_total_stages(self):
+        class IncompleteBackend(TranscriptionBackend):
+            def transcribe(self, audio_path, **kwargs):
+                pass
+
+            @property
+            def supports_diarization(self) -> bool:
+                return False
 
         with pytest.raises(TypeError):
             IncompleteBackend()
@@ -76,3 +96,25 @@ class TestBackendFactory:
 
         backend = get_backend("meeting")
         assert isinstance(backend, TranscriptionBackend)
+
+
+class TestBackendTotalStages:
+    """Tests for total_stages property on each backend."""
+
+    def test_whisperx_total_stages(self):
+        from src.backends import get_backend
+
+        backend = get_backend("meeting")
+        assert backend.total_stages == 6
+
+    def test_mlx_total_stages(self):
+        from src.backends import get_backend
+
+        backend = get_backend("fast")
+        assert backend.total_stages == 3
+
+    def test_granite_total_stages(self):
+        from src.backends import get_backend
+
+        backend = get_backend("precise")
+        assert backend.total_stages == 4

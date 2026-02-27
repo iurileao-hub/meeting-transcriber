@@ -35,6 +35,10 @@ class MLXBackend(TranscriptionBackend):
     def supports_diarization(self) -> bool:
         return False
 
+    @property
+    def total_stages(self) -> int:
+        return 3  # loading → transcribing → saving
+
     def transcribe(
         self,
         audio_path: str,

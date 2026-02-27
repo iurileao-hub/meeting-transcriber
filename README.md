@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20Apple%20Silicon-lightgrey.svg)](https://support.apple.com/en-us/HT211814)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-148%20passed-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-165%20passed-brightgreen.svg)](tests/)
 [![Offline](https://img.shields.io/badge/works-100%25%20offline-blueviolet.svg)]()
 
 **Turn your meeting recordings into searchable, speaker-labeled transcripts — 100% locally, no cloud required.**
