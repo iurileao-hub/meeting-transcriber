@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .base import TranscriptionBackend, TranscriptionResult, pyannote_progress_hook
+from .base import TranscriptionBackend, TranscriptionResult, patch_hf_hub_compat, pyannote_progress_hook
 
 
 class WhisperXBackend(TranscriptionBackend):
@@ -103,6 +103,9 @@ class WhisperXBackend(TranscriptionBackend):
         """
         import whisperx
         from whisperx.diarize import DiarizationPipeline
+
+        # Ensure compatibility with newer huggingface_hub versions
+        patch_hf_hub_compat()
 
         # Stage 1: Load model
         if progress_callback:

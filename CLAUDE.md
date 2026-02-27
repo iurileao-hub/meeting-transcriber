@@ -256,7 +256,7 @@ seguindo o template em examples/meeting_minutes.md
 - ✅ Tratamento de erros com mensagens úteis
 - ✅ Otimização de performance (compute_type, batch_size)
 - ✅ Liberação de memória após cada etapa
-- ✅ Testes unitários (165 testes)
+- ✅ Testes unitários (169 testes)
 - ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
 - ✅ **[Fase 3]** Interface bilíngue (en/pt)
 - ✅ **[Fase 3]** Barra de progresso com spinner animado, timer e ETA
@@ -283,7 +283,7 @@ Revisão de código realizada em Janeiro 2026:
 
 ### Arquitetura
 - ✅ Factory pattern corrigido para passar configuração aos backends
-- ✅ Testes expandidos para cobrir Granite backend (165 testes total)
+- ✅ Testes expandidos para cobrir Granite backend (169 testes total)
 
 ### Documentação
 - ✅ PLAN.md movido para `docs/DEVELOPMENT_HISTORY.md`
@@ -299,6 +299,12 @@ Revisão de código realizada em Janeiro 2026:
 - ✅ Progresso granular para VAD e diarização via monkey-patch do pyannote `Inference.slide`
 - ✅ Nova etapa "Detectando fala" (VAD) visível na barra de progresso
 - ✅ Contagem de stages dinâmica via `backend.total_stages` (WhisperX=6, Granite=4, MLX=3)
+
+### Compatibilidade HuggingFace Hub (Fevereiro 2026)
+- ✅ Patch de compatibilidade para `huggingface_hub` 1.x (parâmetro `use_auth_token` → `token`)
+- ✅ Corrige erro de diarização com versões recentes do huggingface_hub
+- ✅ Patch transparente aplicado antes de operações pyannote (VAD e diarização)
+- ✅ Auto-detecta se patch é necessário (seguro para versões antigas e novas)
 
 ---
 

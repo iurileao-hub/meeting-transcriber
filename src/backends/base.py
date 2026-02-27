@@ -1,4 +1,6 @@
 """Base class for transcription backends."""
+import functools
+import inspect
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -65,6 +67,58 @@ class TranscriptionBackend(ABC):
     def name(self) -> str:
         """Human-readable backend name."""
         return self.__class__.__name__.replace("Backend", "")
+
+
+_hf_compat_applied = False
+
+
+def patch_hf_hub_compat() -> None:
+    """Patch hf_hub_download to accept deprecated use_auth_token parameter.
+
+    Newer versions of huggingface_hub removed the use_auth_token parameter
+    in favor of 'token'. Since pyannote.audio 3.4.0 still uses the old
+    parameter throughout its codebase, this patch translates it transparently.
+
+    Safe to call multiple times — only applies once.
+    """
+    global _hf_compat_applied
+    if _hf_compat_applied:
+        return
+
+    import huggingface_hub
+
+    original = huggingface_hub.hf_hub_download
+
+    # Check if patch is needed (use_auth_token still accepted)
+    sig = inspect.signature(original)
+    if "use_auth_token" in sig.parameters:
+        _hf_compat_applied = True
+        return
+
+    @functools.wraps(original)
+    def _patched_hf_hub_download(*args, **kwargs):
+        if "use_auth_token" in kwargs:
+            kwargs["token"] = kwargs.pop("use_auth_token")
+        return original(*args, **kwargs)
+
+    # Patch the source module
+    huggingface_hub.hf_hub_download = _patched_hf_hub_download
+
+    # Patch already-imported references in pyannote modules
+    for mod_name in (
+        "pyannote.audio.core.pipeline",
+        "pyannote.audio.core.model",
+    ):
+        try:
+            import sys
+
+            mod = sys.modules.get(mod_name)
+            if mod and hasattr(mod, "hf_hub_download"):
+                mod.hf_hub_download = _patched_hf_hub_download
+        except Exception:
+            pass
+
+    _hf_compat_applied = True
 
 
 @contextmanager

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .base import TranscriptionBackend, TranscriptionResult, pyannote_progress_hook
+from .base import TranscriptionBackend, TranscriptionResult, patch_hf_hub_compat, pyannote_progress_hook
 
 
 class GraniteBackend(TranscriptionBackend):
@@ -217,6 +217,9 @@ class GraniteBackend(TranscriptionBackend):
         hf_token = self._load_hf_token()
         from whisperx.diarize import DiarizationPipeline
         import whisperx
+
+        # Ensure compatibility with newer huggingface_hub versions
+        patch_hf_hub_compat()
 
         audio = whisperx.load_audio(audio_path)
 

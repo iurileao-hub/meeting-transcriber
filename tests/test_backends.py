@@ -1,5 +1,6 @@
 """Tests for transcription backends."""
 import pytest
+from unittest.mock import patch, MagicMock
 from src.backends.base import TranscriptionBackend, TranscriptionResult
 
 
@@ -118,3 +119,118 @@ class TestBackendTotalStages:
 
         backend = get_backend("precise")
         assert backend.total_stages == 4
+
+
+class TestHfHubCompatPatch:
+    """Tests for huggingface_hub compatibility patch."""
+
+    def setup_method(self):
+        """Reset the patch flag before each test."""
+        import src.backends.base as base_mod
+
+        base_mod._hf_compat_applied = False
+
+    def test_patch_translates_use_auth_token_to_token(self):
+        """Patch should translate use_auth_token kwarg to token."""
+        import src.backends.base as base_mod
+
+        # Create a mock hf_hub_download without use_auth_token param
+        mock_original = MagicMock()
+        mock_original.__signature__ = MagicMock()
+
+        mock_module = MagicMock()
+        mock_module.hf_hub_download = mock_original
+
+        with patch.dict("sys.modules", {"huggingface_hub": mock_module}):
+            with patch("inspect.signature") as mock_sig:
+                # Simulate: use_auth_token NOT in signature (newer version)
+                mock_params = MagicMock()
+                mock_params.parameters = {}
+                mock_sig.return_value = mock_params
+
+                base_mod.patch_hf_hub_compat()
+
+            # Now call the patched function with use_auth_token
+            patched_fn = mock_module.hf_hub_download
+            patched_fn("model_id", "filename", use_auth_token="my_token")
+
+            # The original should have received 'token' instead
+            mock_original.assert_called_once_with(
+                "model_id", "filename", token="my_token"
+            )
+
+    def test_patch_skips_when_use_auth_token_supported(self):
+        """Patch should not apply if use_auth_token is still supported."""
+        import src.backends.base as base_mod
+
+        mock_original = MagicMock()
+        mock_module = MagicMock()
+        mock_module.hf_hub_download = mock_original
+
+        with patch.dict("sys.modules", {"huggingface_hub": mock_module}):
+            with patch("inspect.signature") as mock_sig:
+                # Simulate: use_auth_token IN signature (older version)
+                mock_params = MagicMock()
+                mock_params.parameters = {"use_auth_token": MagicMock()}
+                mock_sig.return_value = mock_params
+
+                base_mod.patch_hf_hub_compat()
+
+            # Function should not have been replaced
+            assert mock_module.hf_hub_download is mock_original
+
+    def test_patch_only_applies_once(self):
+        """Calling patch_hf_hub_compat multiple times should only patch once."""
+        import src.backends.base as base_mod
+
+        call_count = 0
+
+        def counting_patch():
+            nonlocal call_count
+            call_count += 1
+
+        with patch("inspect.signature") as mock_sig:
+            mock_params = MagicMock()
+            mock_params.parameters = {"use_auth_token": MagicMock()}
+            mock_sig.return_value = mock_params
+
+            with patch.dict("sys.modules", {"huggingface_hub": MagicMock()}):
+                base_mod.patch_hf_hub_compat()
+                base_mod.patch_hf_hub_compat()
+                base_mod.patch_hf_hub_compat()
+
+        # inspect.signature should only be called once (guard prevents re-entry)
+        assert mock_sig.call_count == 1
+
+    def test_patch_passes_through_other_kwargs(self):
+        """Patch should pass through all other kwargs unchanged."""
+        import src.backends.base as base_mod
+
+        mock_original = MagicMock()
+        mock_module = MagicMock()
+        mock_module.hf_hub_download = mock_original
+
+        with patch.dict("sys.modules", {"huggingface_hub": mock_module}):
+            with patch("inspect.signature") as mock_sig:
+                mock_params = MagicMock()
+                mock_params.parameters = {}
+                mock_sig.return_value = mock_params
+
+                base_mod.patch_hf_hub_compat()
+
+            patched_fn = mock_module.hf_hub_download
+            patched_fn(
+                "model_id",
+                "filename",
+                use_auth_token="my_token",
+                revision="main",
+                cache_dir="/tmp",
+            )
+
+            mock_original.assert_called_once_with(
+                "model_id",
+                "filename",
+                token="my_token",
+                revision="main",
+                cache_dir="/tmp",
+            )
