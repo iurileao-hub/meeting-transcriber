@@ -181,6 +181,7 @@ python src/transcribe.py reuniao.mp3
 |-------------|---------|-------------|
 | **Melhor qualidade** (padrão) | `python src/transcribe.py audio.mp3` | Identificação de speakers incluída |
 | **Resultado mais rápido** | `python src/transcribe.py audio.mp3 --mode fast` | Sem identificação de speakers |
+| **Rápido + speakers** | `python src/transcribe.py audio.mp3 --mode fast --diarize` | Velocidade MLX com ID de speaker |
 | **Máxima precisão** | `python src/transcribe.py audio.mp3 --mode precise` | Mais lento, porém mais preciso |
 
 ### Opções Comuns
@@ -206,7 +207,7 @@ python src/transcribe.py reuniao.mp3 --format txt
 
 | Opção | Curto | Descrição | Padrão |
 |-------|-------|-----------|--------|
-| `--model` | `-m` | Tamanho do modelo (tiny/base/small/medium/large-v3) | large-v3 |
+| `--model` | `-m` | Tamanho do modelo (ver [Seleção de Modelo](#seleção-de-modelo)) | large-v3 |
 | `--language` | `-l` | Idioma do áudio (en, pt, es, etc.) | auto-detectar |
 | `--num-speakers` | `-n` | Número exato de speakers | auto-detectar |
 | `--min-speakers` | | Mínimo de speakers esperado | - |
@@ -218,6 +219,7 @@ python src/transcribe.py reuniao.mp3 --format txt
 | `--notify` | | Notificação macOS ao terminar | desligado |
 | `--vocab` | | Arquivo de vocabulário customizado | - |
 | `--ui-lang` | | Idioma da interface (en/pt) | auto |
+| `--diarize` | | Habilitar ID de speaker no modo fast | desligado |
 | `--verbose` | `-v` | Mostrar logs detalhados | desligado |
 
 </details>
@@ -273,12 +275,23 @@ Modelos maiores são mais precisos, porém mais lentos e usam mais memória.
 | medium | Muito boa | Lento | 5GB | Reuniões importantes |
 | **large-v3** | Excelente | Mais lento | 10GB | Produção (padrão) |
 
+### Modelos MLX Estendidos (apenas modo fast)
+
+| Modelo | Descrição | Caso de Uso |
+|--------|-----------|-------------|
+| large-v3-turbo | Variante turbo (809M params) | Melhor balanço velocidade/qualidade |
+| distil-large-v3 | Destilado (756M params) | Mais rápido, levemente menos preciso |
+| large-v3-8bit | Quantizado 8-bit (1.5B) | Menor uso de memória |
+
 ```bash
 # Usar modelo menor para testes
 python src/transcribe.py reuniao.mp3 --model small
 
 # Usar modelo maior para gravações importantes
 python src/transcribe.py reuniao.mp3 --model large-v3
+
+# Usar modelo turbo MLX no modo rápido
+python src/transcribe.py reuniao.mp3 --mode fast --model large-v3-turbo
 ```
 
 ---

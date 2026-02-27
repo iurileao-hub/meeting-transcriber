@@ -74,6 +74,9 @@ class ProgressReporter:
         # Timing
         self._start_time = time.monotonic()
         self._stage_start_time = self._start_time
+        # Stagnation detection
+        self._last_pct_change_time = self._start_time
+        self._last_pct_value: float = 0
         # Spinner state
         self._spinner_idx = 0
         self._current_stage: Stage | None = None
@@ -132,6 +135,12 @@ class ProgressReporter:
         total_estimated = elapsed / (percent / 100)
         return total_estimated - elapsed
 
+    def _is_stagnant(self) -> bool:
+        """Detect stagnant progress (no change for >10s at >=95%)."""
+        if self._current_percent < 95:
+            return False
+        return (time.monotonic() - self._last_pct_change_time) > 10
+
     def _format_time_info(self, percent: float) -> str:
         """Format elapsed time and ETA string.
 
@@ -143,6 +152,10 @@ class ProgressReporter:
         """
         elapsed = time.monotonic() - self._start_time
         elapsed_str = format_duration(elapsed)
+
+        if self._is_stagnant():
+            label = "finalizando..." if self.lang == "pt" else "finalizing..."
+            return f"{elapsed_str} | {label}"
 
         remaining = self._estimate_remaining(percent)
         if remaining is not None and percent < 100:
@@ -179,6 +192,9 @@ class ProgressReporter:
             percent: Progress percentage (0-100).
         """
         with self._lock:
+            if abs(percent - self._last_pct_value) > 0.5:
+                self._last_pct_change_time = time.monotonic()
+                self._last_pct_value = percent
             self._current_stage = stage
             self._current_percent = percent
             self._render()
@@ -189,6 +205,8 @@ class ProgressReporter:
         self._stop_ticker()
         self.current_stage += 1
         self._stage_start_time = time.monotonic()
+        self._last_pct_change_time = time.monotonic()
+        self._last_pct_value = 0
         print(file=self._stdout)
 
     def complete(self, output_path: str, duration_seconds: float) -> None:

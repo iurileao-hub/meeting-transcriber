@@ -181,6 +181,7 @@ python src/transcribe.py meeting.mp3
 |-----------|---------|-------|
 | **Best quality** (default) | `python src/transcribe.py audio.mp3` | Speaker identification included |
 | **Fastest result** | `python src/transcribe.py audio.mp3 --mode fast` | No speaker identification |
+| **Fast + speakers** | `python src/transcribe.py audio.mp3 --mode fast --diarize` | MLX speed with speaker ID |
 | **Maximum accuracy** | `python src/transcribe.py audio.mp3 --mode precise` | Slower but most accurate |
 
 ### Common Options
@@ -206,7 +207,7 @@ python src/transcribe.py meeting.mp3 --format txt
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--model` | `-m` | AI model size (tiny/base/small/medium/large-v3) | large-v3 |
+| `--model` | `-m` | AI model size (see [Model Selection](#model-selection)) | large-v3 |
 | `--language` | `-l` | Audio language (en, pt, es, etc.) | auto-detect |
 | `--num-speakers` | `-n` | Exact number of speakers | auto-detect |
 | `--min-speakers` | | Minimum speakers expected | - |
@@ -218,6 +219,7 @@ python src/transcribe.py meeting.mp3 --format txt
 | `--notify` | | macOS notification when done | off |
 | `--vocab` | | Custom vocabulary file | - |
 | `--ui-lang` | | Interface language (en/pt) | auto |
+| `--diarize` | | Enable speaker ID in fast mode | off |
 | `--verbose` | `-v` | Show detailed logs | off |
 
 </details>
@@ -273,12 +275,23 @@ Larger models are more accurate but slower and use more memory.
 | medium | Very good | Slow | 5GB | Important meetings |
 | **large-v3** | Excellent | Slower | 10GB | Production (default) |
 
+### MLX Extended Models (fast mode only)
+
+| Model | Description | Use Case |
+|-------|-------------|----------|
+| large-v3-turbo | Turbo variant (809M params) | Best speed/quality balance |
+| distil-large-v3 | Distilled (756M params) | Faster, slightly less accurate |
+| large-v3-8bit | 8-bit quantized (1.5B) | Lower memory usage |
+
 ```bash
 # Use smaller model for testing
 python src/transcribe.py meeting.mp3 --model small
 
 # Use largest model for important recordings
 python src/transcribe.py meeting.mp3 --model large-v3
+
+# Use MLX turbo model for fast mode
+python src/transcribe.py meeting.mp3 --mode fast --model large-v3-turbo
 ```
 
 ---

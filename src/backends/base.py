@@ -122,6 +122,54 @@ def patch_hf_hub_compat() -> None:
 
 
 @contextmanager
+def diarization_progress_hook(
+    progress_callback: Callable[[str, float], None] | None,
+    stage_name: str = "diarizing",
+):
+    """Inject native pyannote hook into SpeakerDiarization.apply for granular progress.
+
+    Patches SpeakerDiarization.apply to pass a hook that maps pyannote's internal
+    sub-stages (segmentation, embeddings, discrete_diarization) into a single
+    0-99% progress range with weighted distribution.
+
+    Args:
+        progress_callback: Callback(stage_name, percent) or None.
+        stage_name: Stage name to report (e.g., 'diarizing').
+    """
+    if not progress_callback:
+        yield
+        return
+
+    from pyannote.audio.pipelines.speaker_diarization import SpeakerDiarization
+
+    original_apply = SpeakerDiarization.apply
+
+    # Sub-stage weight distribution (approximate time split)
+    STAGE_RANGES = {
+        "segmentation": (0, 45),
+        "embeddings": (45, 85),
+        "discrete_diarization": (85, 99),
+    }
+
+    def apply_with_hook(self, file, **kwargs):
+        def our_hook(step_name, step_artifact, file=None, completed=0, total=0):
+            rng = STAGE_RANGES.get(step_name)
+            if rng and total > 0:
+                start_pct, end_pct = rng
+                pct = start_pct + (completed / total) * (end_pct - start_pct)
+                progress_callback(stage_name, min(pct, 99))
+
+        kwargs["hook"] = our_hook
+        return original_apply(self, file, **kwargs)
+
+    SpeakerDiarization.apply = apply_with_hook
+    try:
+        yield
+    finally:
+        SpeakerDiarization.apply = original_apply
+
+
+@contextmanager
 def pyannote_progress_hook(
     progress_callback: Callable[[str, float], None] | None,
     stage_name: str,

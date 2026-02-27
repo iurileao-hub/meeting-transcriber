@@ -124,6 +124,9 @@ python src/transcribe.py audio.wav --verbose
 # Transcrição rápida (sem diarização)
 python src/transcribe.py audio.wav --mode fast
 
+# Transcrição rápida COM diarização
+python src/transcribe.py audio.wav --mode fast --diarize
+
 # Transcrição de alta precisão
 python src/transcribe.py audio.wav --mode precise
 
@@ -149,7 +152,7 @@ pytest tests/ -v
 
 | Flag | Descrição | Valores | Padrão |
 |------|-----------|---------|--------|
-| `--model`, `-m` | Modelo Whisper | tiny, base, small, medium, large-v3 | large-v3 |
+| `--model`, `-m` | Modelo Whisper | tiny, base, small, medium, large-v3 (MLX extras: large-v3-turbo, distil-large-v3, large-v3-8bit) | large-v3 |
 | `--language`, `-l` | Idioma | pt, en, es, etc. | auto |
 | `--num-speakers`, `-n` | Nº exato de speakers | inteiro | auto |
 | `--format`, `-f` | Formato de saída | json, txt, md, all | all |
@@ -160,12 +163,13 @@ pytest tests/ -v
 | `--ui-lang` | Idioma da interface | en, pt | auto |
 | `--notify` | Notificação macOS | flag | false |
 | `--vocab` | Arquivo de vocabulário | path | - |
+| `--diarize` | Diarização no modo fast | flag | false |
 
 ### Modos de Transcrição
 
 | Modo | Backend | Diarização | Velocidade | Uso |
 |------|---------|------------|------------|-----|
-| `fast` | MLX-Whisper | Não | 10-15x tempo real | Transcrição rápida |
+| `fast` | MLX-Whisper | Opcional (--diarize) | 10-15x tempo real | Transcrição rápida |
 | `meeting` | WhisperX | Sim | Moderado | Reuniões (padrão) |
 | `precise` | Granite + pyannote | Sim | Mais lento | Alta precisão |
 
