@@ -92,11 +92,14 @@ class TestWhisperXBackendTranscribe:
     """Test transcription functionality with mocked whisperx."""
 
     @pytest.fixture(autouse=True)
-    def _mock_pyannote_hook(self):
-        """Patch pyannote_progress_hook to avoid importing real pyannote.
-        The hook is tested separately in TestPyannoteProgressHook."""
+    def _mock_pyannote_hooks(self):
+        """Patch progress hooks to avoid importing real pyannote.
+        The hooks are tested separately in their own test classes."""
         with patch(
             "src.backends.whisperx_backend.pyannote_progress_hook",
+            side_effect=lambda cb, stage: nullcontext(),
+        ), patch(
+            "src.backends.whisperx_backend.diarization_progress_hook",
             side_effect=lambda cb, stage: nullcontext(),
         ):
             yield
@@ -249,10 +252,13 @@ class TestWhisperXProgressInterception:
     """Test print_progress interception for granular transcription progress."""
 
     @pytest.fixture(autouse=True)
-    def _mock_pyannote_hook(self):
-        """Patch pyannote_progress_hook to avoid importing real pyannote."""
+    def _mock_pyannote_hooks(self):
+        """Patch progress hooks to avoid importing real pyannote."""
         with patch(
             "src.backends.whisperx_backend.pyannote_progress_hook",
+            side_effect=lambda cb, stage: nullcontext(),
+        ), patch(
+            "src.backends.whisperx_backend.diarization_progress_hook",
             side_effect=lambda cb, stage: nullcontext(),
         ):
             yield

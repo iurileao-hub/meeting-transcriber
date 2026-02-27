@@ -371,6 +371,7 @@ def transcribe(
     progress: ProgressReporter | None = None,
     vocabulary: list[str] | None = None,
     send_notify: bool = False,
+    enable_diarization: bool = False,
 ) -> dict:
     """
     Transcreve áudio com identificação de speakers.
@@ -423,6 +424,7 @@ def transcribe(
             mode,
             model_size=model_size,
             device=device,
+            enable_diarization=enable_diarization,
             # hf_token loaded from env by backend if needed
         )
     except ValueError as e:
@@ -632,8 +634,8 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
     parser.add_argument(
         "--model", "-m",
         default="large-v3",
-        choices=["tiny", "base", "small", "medium", "large-v3"],
-        help="Tamanho do modelo Whisper (default: large-v3)",
+        help="Model size. Standard: tiny/base/small/medium/large-v3. "
+             "MLX extras: large-v3-turbo, distil-large-v3, large-v3-8bit",
     )
     parser.add_argument(
         "--language", "-l",
@@ -691,6 +693,11 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
         help="Caminho para arquivo de vocabulário customizado (um termo por linha)",
     )
     parser.add_argument(
+        "--diarize",
+        action="store_true",
+        help="Enable speaker diarization in fast mode (requires HuggingFace token)",
+    )
+    parser.add_argument(
         "--verbose", "-v",
         action="store_true",
         help="Mostra warnings e logs detalhados (útil para debug)",
@@ -734,6 +741,7 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
             translator=translator,
             vocabulary=vocabulary if vocabulary else None,
             send_notify=args.notify,
+            enable_diarization=args.diarize,
         )
     except TranscriptionError as e:
         print(f"\n{translator('messages.error')}: {e}", file=sys.stderr)

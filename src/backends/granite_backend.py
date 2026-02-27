@@ -7,7 +7,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .base import TranscriptionBackend, TranscriptionResult, patch_hf_hub_compat, pyannote_progress_hook
+from .base import (
+    TranscriptionBackend,
+    TranscriptionResult,
+    diarization_progress_hook,
+    patch_hf_hub_compat,
+)
 
 
 class GraniteBackend(TranscriptionBackend):
@@ -236,7 +241,7 @@ class GraniteBackend(TranscriptionBackend):
         if max_speakers:
             diarize_kwargs["max_speakers"] = max_speakers
 
-        with pyannote_progress_hook(progress_callback, "diarizing"):
+        with diarization_progress_hook(progress_callback, "diarizing"):
             diarize_segments = diarize_model(audio, **diarize_kwargs)
 
         if progress_callback:
