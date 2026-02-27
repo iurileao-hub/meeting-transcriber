@@ -459,6 +459,10 @@ def transcribe(
             # Advance to next stage if we're starting a new one
             if current_stage_name[0] != stage_name:
                 if current_stage_name[0] is not None:
+                    # Complete previous stage at 100% before advancing
+                    prev_stage = stage_map.get(current_stage_name[0])
+                    if prev_stage:
+                        progress.update(prev_stage, 100)
                     progress.advance()
                 current_stage_name[0] = stage_name
             progress.update(stage, percent)
