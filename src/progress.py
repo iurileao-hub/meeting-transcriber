@@ -57,26 +57,32 @@ class ProgressReporter:
     to show the process is still alive.
     """
 
-    def __init__(self, total_stages: int, lang: str = "en", width: int = 20):
+    def __init__(
+        self, total_stages: int, lang: str = "en", width: int = 20, file=None
+    ):
         """Initialize progress reporter.
 
         Args:
             total_stages: Total number of stages in pipeline.
             lang: Language for labels ('en' or 'pt').
             width: Width of progress bar in characters.
+            file: Explicit output file object. Defaults to sys.stdout.
         """
         self.total_stages = total_stages
         self.lang = lang
         self.width = width
         self.current_stage = 1
-        # Capture real stdout before SuppressOutput can replace it
-        self._stdout = sys.stdout
+        # Accept explicit output file or capture real stdout before
+        # SuppressOutput can replace it
+        self._stdout = file if file is not None else sys.stdout
         # Timing
         self._start_time = time.monotonic()
         self._stage_start_time = self._start_time
         # Stagnation detection
         self._last_pct_change_time = self._start_time
         self._last_pct_value: float = 0
+        # Render throttle
+        self._last_render_time: float = 0
         # Spinner state
         self._spinner_idx = 0
         self._current_stage: Stage | None = None
@@ -197,7 +203,10 @@ class ProgressReporter:
                 self._last_pct_value = percent
             self._current_stage = stage
             self._current_percent = percent
-            self._render()
+            now = time.monotonic()
+            if now - self._last_render_time >= 0.1:  # 100ms throttle
+                self._render()
+                self._last_render_time = now
         self._start_ticker()
 
     def advance(self) -> None:

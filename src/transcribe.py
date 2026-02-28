@@ -19,11 +19,10 @@ import os
 import sys
 import time
 import warnings
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
-
-from dotenv import load_dotenv
 
 # Ensure src is importable
 _project_root = Path(__file__).parent.parent
@@ -121,33 +120,41 @@ class SuppressOutput:
 
     def __exit__(self, *args):
         try:
-            if self._stdout:
+            if self._stdout is not None:
                 sys.stdout = self._stdout
-            if self._stderr:
+            if self._stderr is not None:
                 sys.stderr = self._stderr
         finally:
-            if self._devnull:
+            if self._devnull is not None:
                 self._devnull.close()
         return False  # Don't suppress exceptions
 
 
-# Aplicar configuração de warnings na importação
-configure_warnings()
+@contextmanager
+def _allow_legacy_torch_load():
+    """Temporarily allow pickle-based torch.load for trusted pyannote models.
 
-# Fix para PyTorch 2.6+ que mudou weights_only=True por padrão
-# Necessário para carregar modelos pyannote que usam formato antigo
-# Os modelos do HuggingFace/pyannote são confiáveis
-import torch
-_original_torch_load = torch.load
-def _patched_torch_load(*args, **kwargs):
-    # Força weights_only=False, sobrescrevendo qualquer valor
-    kwargs["weights_only"] = False
-    return _original_torch_load(*args, **kwargs)
-torch.load = _patched_torch_load
+    PyTorch 2.6+ defaults to weights_only=True for security. Pyannote models
+    require the legacy behavior. This narrows the security exception to only
+    the specific code that needs it.
+    """
+    import torch
+    import torch.serialization as torch_ser
 
-# Patch também no módulo serialization para garantir
-import torch.serialization
-torch.serialization.load = _patched_torch_load
+    original_load = torch.load
+    original_ser_load = torch_ser.load
+
+    def patched(*args, **kwargs):
+        kwargs["weights_only"] = False
+        return original_load(*args, **kwargs)
+
+    torch.load = patched
+    torch_ser.load = patched
+    try:
+        yield
+    finally:
+        torch.load = original_load
+        torch_ser.load = original_ser_load
 
 
 class TranscriptionError(Exception):
@@ -165,6 +172,9 @@ FORBIDDEN_OUTPUT_PATHS = {
     "/etc", "/sys", "/proc", "/root", "/var/log", "/boot",
     "/usr/bin", "/usr/sbin", "/usr/lib", "/bin", "/sbin",
     "/System", "/Library",  # macOS system directories
+    str(Path.home() / ".ssh"),
+    str(Path.home() / ".aws"),
+    str(Path.home() / ".kube"),
 }
 
 
@@ -194,59 +204,6 @@ def validate_output_path(output_dir: str) -> Path:
             )
 
     return path
-
-
-def load_hf_token() -> str:
-    """Carrega token HuggingFace do ambiente ou .env.
-
-    Returns:
-        Token de autenticação do HuggingFace.
-
-    Raises:
-        TranscriptionError: Se o token não for encontrado.
-    """
-    env_file = Path(__file__).parent.parent / ".env"
-    load_dotenv(env_file)
-
-    token = os.getenv("HF_TOKEN")
-    if not token:
-        raise TranscriptionError(
-            "Token HuggingFace não encontrado.\n"
-            "Configure HF_TOKEN no arquivo .env ou como variável de ambiente.\n"
-            "Obtenha seu token em: https://huggingface.co/settings/tokens"
-        )
-    return token
-
-
-def get_compute_type(device: str) -> str:
-    """Retorna o compute_type ideal para o dispositivo.
-
-    Args:
-        device: Dispositivo de processamento (cpu, cuda, mps).
-
-    Returns:
-        Tipo de computação otimizado para o dispositivo.
-    """
-    if device == "cpu":
-        return "int8"  # Mais rápido em CPU
-    return "float16"  # GPU (cuda/mps) - 2x mais rápido
-
-
-def get_batch_size(device: str, model_size: str) -> int:
-    """Calcula batch_size ideal baseado em recursos disponíveis.
-
-    Args:
-        device: Dispositivo de processamento.
-        model_size: Tamanho do modelo Whisper.
-
-    Returns:
-        Tamanho do batch otimizado.
-    """
-    if device == "cpu":
-        return 8  # Conservador para CPU
-    if model_size in ("tiny", "base", "small"):
-        return 32  # Modelos menores permitem batches maiores
-    return 16  # medium, large-v3
 
 
 def validate_audio_file(audio_path: Path) -> None:
@@ -356,6 +313,52 @@ def save_as_markdown(result: dict, output_file: Path) -> None:
 SUPPORTED_OUTPUT_FORMATS = {"json", "txt", "md", "all"}
 
 
+def _save_results(
+    result: dict,
+    output_dir: str,
+    audio_stem: str,
+    output_format: str,
+) -> list[Path]:
+    """Save transcription results in requested formats.
+
+    Args:
+        result: Transcription result dictionary with segments and metadata.
+        output_dir: Directory to save files to.
+        audio_stem: Base name for output files (without extension).
+        output_format: Format to save ('json', 'txt', 'md', or 'all').
+
+    Returns:
+        List of saved file paths.
+
+    Raises:
+        TranscriptionError: If output path is forbidden or write fails.
+    """
+    output_path = validate_output_path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    saved_files: list[Path] = []
+
+    formats_to_save = (
+        ["json", "txt", "md"] if output_format == "all" else [output_format]
+    )
+
+    for fmt in formats_to_save:
+        if fmt == "json":
+            output_file = output_path / f"{audio_stem}.json"
+            with open(output_file, "w", encoding="utf-8") as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+            saved_files.append(output_file)
+        elif fmt == "txt":
+            output_file = output_path / f"{audio_stem}.txt"
+            save_as_text(result, output_file)
+            saved_files.append(output_file)
+        elif fmt == "md":
+            output_file = output_path / f"{audio_stem}.md"
+            save_as_markdown(result, output_file)
+            saved_files.append(output_file)
+
+    return saved_files
+
+
 def transcribe(
     audio_path: str,
     model_size: str = "large-v3",
@@ -393,6 +396,7 @@ def transcribe(
         progress: Reporter de progresso
         vocabulary: Lista de termos customizados
         send_notify: Se True, envia notificação ao finalizar
+        enable_diarization: Se True, ativa diarização no modo fast
 
     Returns:
         Dicionário com transcrição e metadados
@@ -420,8 +424,8 @@ def transcribe(
     if translator is None:
         translator = get_translator()
 
-    # Determine UI language from translator (check a known translation)
-    ui_lang = "pt" if translator("messages.complete") == "Transcrição completa" else "en"
+    # Determine UI language from translator
+    ui_lang = getattr(translator, "lang", "en")
 
     # Get the appropriate backend for the mode with configuration
     try:
@@ -451,7 +455,6 @@ def transcribe(
         "transcribing": Stage.TRANSCRIBING,
         "aligning": Stage.ALIGNING,
         "diarizing": Stage.DIARIZING,
-        "saving": Stage.SAVING,
     }
     current_stage_name = [None]  # Use list to allow modification in closure
 
@@ -477,22 +480,27 @@ def transcribe(
 
     # Transcribe using the backend
     try:
-        with SuppressOutput(suppress_stdout=not verbose, suppress_stderr=not verbose):
-            backend_result = backend.transcribe(
-                audio_path=audio_path,
-                language=language,
-                num_speakers=num_speakers,
-                min_speakers=min_speakers,
-                max_speakers=max_speakers,
-                progress_callback=progress_callback,
-            )
+        with _allow_legacy_torch_load():
+            with SuppressOutput(
+                suppress_stdout=not verbose, suppress_stderr=not verbose
+            ):
+                backend_result = backend.transcribe(
+                    audio_path=audio_path,
+                    language=language,
+                    num_speakers=num_speakers,
+                    min_speakers=min_speakers,
+                    max_speakers=max_speakers,
+                    progress_callback=progress_callback,
+                )
     except ValueError as e:
         progress.error(str(e))
         raise TranscriptionError(str(e)) from e
     except Exception as e:
-        progress.error(str(e))
+        progress.error(str(e) if verbose else "Transcription pipeline failed")
+        if verbose:
+            raise TranscriptionError(f"Transcription failed: {e}") from e
         raise TranscriptionError(
-            f"Transcription failed: {e}\n"
+            "Transcription failed. Run with --verbose for details.\n"
             "Check your HuggingFace token and model access permissions."
         ) from e
 
@@ -529,42 +537,22 @@ def transcribe(
     if vocabulary:
         result["metadata"]["vocabulary_terms"] = len(vocabulary)
 
-    # Stage: Saving
-    progress_callback("saving", 0)
+    # Advance past the last backend stage before saving
+    if current_stage_name[0] is not None:
+        prev_stage = stage_map.get(current_stage_name[0])
+        if prev_stage:
+            progress.update(prev_stage, 100)
+        progress.advance()
+
+    # Stage: Saving (update progress directly, not via callback)
+    progress.update(Stage.SAVING, 0)
 
     # Save results
     try:
-        # Validate output path for security
-        output_path = validate_output_path(output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        base_name = audio_path_obj.stem
-        saved_files = []
-
-        # Determine which formats to save
-        formats_to_save = []
-        if output_format == "all":
-            formats_to_save = ["json", "txt", "md"]
-        else:
-            formats_to_save = [output_format]
-
-        # Save in each requested format
-        for fmt in formats_to_save:
-            if fmt == "json":
-                output_file = output_path / f"{base_name}.json"
-                with open(output_file, "w", encoding="utf-8") as f:
-                    json.dump(result, f, ensure_ascii=False, indent=2)
-                saved_files.append(output_file)
-            elif fmt == "txt":
-                output_file = output_path / f"{base_name}.txt"
-                save_as_text(result, output_file)
-                saved_files.append(output_file)
-            elif fmt == "md":
-                output_file = output_path / f"{base_name}.md"
-                save_as_markdown(result, output_file)
-                saved_files.append(output_file)
-
-        progress_callback("saving", 100)
-
+        saved_files = _save_results(result, output_dir, audio_path_obj.stem, output_format)
+        progress.update(Stage.SAVING, 100)
+    except TranscriptionError:
+        raise
     except Exception as e:
         progress.error(str(e))
         raise TranscriptionError(
@@ -710,19 +698,18 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
 
     args = parser.parse_args()
 
+    # Configure warning filters (only when running as CLI)
+    configure_warnings(verbose=args.verbose)
+
     # Auto-detect device if not specified
     if args.device is None:
         args.device = get_default_device()
-
-    # Reconfigurar warnings se modo verbose
-    if args.verbose:
-        configure_warnings(verbose=True)
 
     # Initialize i18n translator
     translator = get_translator(args.ui_lang)
 
     # Determine UI language for progress reporter
-    ui_lang = "pt" if translator("messages.complete") == "Transcrição completa" else "en"
+    ui_lang = getattr(translator, "lang", "en")
 
     # Load vocabulary
     vocabulary = []
