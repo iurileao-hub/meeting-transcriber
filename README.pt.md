@@ -3,7 +3,7 @@
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Plataforma](https://img.shields.io/badge/Plataforma-macOS%20Apple%20Silicon-lightgrey.svg)](https://support.apple.com/pt-br/HT211814)
 [![Licença](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)](LICENSE)
-[![Testes](https://img.shields.io/badge/testes-169%20passaram-brightgreen.svg)](tests/)
+[![Testes](https://img.shields.io/badge/testes-289%20passaram-brightgreen.svg)](tests/)
 [![Offline](https://img.shields.io/badge/funciona-100%25%20offline-blueviolet.svg)]()
 
 **Transforme gravações de reuniões em transcrições com identificação de quem está falando — 100% local, sem nuvem.**
@@ -433,4 +433,4 @@ Licença MIT — livre para uso pessoal e comercial.
 **Iuri Almeida**
 Médico | Gestor de Segurança Pública | Estudante de Ciência da Computação
 
-*Janeiro de 2026*
+*Fevereiro de 2026*

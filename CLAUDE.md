@@ -60,7 +60,7 @@ meeting-transcriber/
 │   ├── audio/            # Arquivos de entrada (.wav, .mp3, .opus, etc.)
 │   ├── transcripts/      # Saídas (.json, .txt, .md)
 │   └── outputs/          # Atas e documentos
-└── tests/                # 148 testes unitários
+└── tests/                # 289 testes unitários
     ├── test_transcribe.py
     ├── test_backends.py
     ├── test_whisperx_backend.py
@@ -246,7 +246,7 @@ seguindo o template em examples/meeting_minutes.md
 
 ## Problemas Conhecidos
 
-1. **PyTorch 2.6+ weights_only:** O script inclui patch para contornar mudança de segurança
+1. **PyTorch 2.6+ weights_only:** O script usa context manager `_allow_legacy_torch_load()` para contornar mudança de segurança apenas durante carregamento de modelos pyannote (escopo limitado, não global)
 2. **Warnings suprimidos:** Warnings de torchaudio/pyannote são filtrados por padrão (use `--verbose` para ver)
 
 ---
@@ -260,7 +260,7 @@ seguindo o template em examples/meeting_minutes.md
 - ✅ Tratamento de erros com mensagens úteis
 - ✅ Otimização de performance (compute_type, batch_size)
 - ✅ Liberação de memória após cada etapa
-- ✅ Testes unitários (215 testes)
+- ✅ Testes unitários (289 testes)
 - ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
 - ✅ **[Fase 3]** Interface bilíngue (en/pt)
 - ✅ **[Fase 3]** Barra de progresso com spinner animado, timer e ETA
@@ -313,6 +313,54 @@ Revisão de código realizada em Janeiro 2026:
 - ✅ Patch transparente aplicado antes de operações pyannote (VAD e diarização)
 - ✅ Auto-detecta se patch é necessário (seguro para versões antigas e novas)
 
+### Revisão de Código Completa (Fevereiro 2026)
+
+Revisão abrangente cobrindo performance, segurança, qualidade de código e arquitetura:
+
+#### Segurança
+- ✅ `torch.load` patch limitado via context manager (antes era global no import)
+- ✅ Vocabulário: allowlist substitui denylist (paths restritos ao diretório do projeto)
+- ✅ Limite de 1MB para arquivos de vocabulário (prevenção de DoS)
+- ✅ Strip de null bytes e control chars no AppleScript
+- ✅ Output path hardening: `~/.ssh`, `~/.aws`, `~/.kube` bloqueados
+- ✅ Sanitização de exceções (não expõe paths internos sem `--verbose`)
+- ✅ Thread-safe patches com `threading.Lock` em `patch_hf_hub_compat`
+- ✅ Logging de tentativas de acesso a paths bloqueados
+
+#### Performance
+- ✅ Lazy imports: backends carregados sob demanda (startup ~3s mais rápido)
+- ✅ Granite: áudio carregado uma única vez (antes era 2x do disco)
+- ✅ Binary search O(log N) para speaker matching no Granite (antes O(N×M))
+- ✅ Progress rendering com throttle de 100ms (antes: até 448 renders por geração)
+- ✅ `inspect.signature()` substituído por dicionário estático no factory
+- ✅ `locale.getdefaultlocale()` substituído por `locale.getlocale()` (Python 3.15 ready)
+
+#### Arquitetura
+- ✅ `_load_hf_token` centralizado na base class (antes: 4 cópias)
+- ✅ ABC `transcribe()` completo com `progress_callback`, `min/max_speakers`
+- ✅ `is_available()` no ABC com check no factory
+- ✅ `_build_diarize_kwargs()` helper centralizado (antes: 3 cópias)
+- ✅ `_save_results()` extraído de `transcribe()` (SRP)
+- ✅ `translator.lang` exposto (substitui comparação frágil de string)
+- ✅ `SuppressOutput.__exit__` corrigido (`is not None` vs truthy)
+- ✅ `ProgressReporter` aceita `file` parameter explícito
+- ✅ `ProgressStreamer` protegido contra `max_tokens=0`
+- ✅ Código morto removido (`get_compute_type`, `get_batch_size`, `load_hf_token`)
+
+#### Testes (+74 novos, total 289)
+- ✅ Testes para `_allow_legacy_torch_load` context manager
+- ✅ Testes para `_save_results()` (JSON, TXT, MD, all)
+- ✅ Testes para `SuppressOutput` (restore, exception safety)
+- ✅ Testes para `format_timestamp` (incluindo horas)
+- ✅ Testes para `ProgressReporter.error()`, throttle, file param
+- ✅ Testes para `format_duration` edge cases
+- ✅ Testes para vocabulary allowlist, size limit, logging
+- ✅ Testes para notify control char stripping
+- ✅ Testes para `translator.lang`, `detect_system_language()`
+- ✅ Testes para `_build_diarize_kwargs`, `_load_hf_token` base class
+- ✅ Testes para binary search no Granite speaker matching
+- ✅ Testes para lazy imports e `is_available()` factory check
+
 ---
 
-*Última atualização: 27 de Fevereiro de 2026 (progresso granular MLX + Granite)*
+*Última atualização: 27 de Fevereiro de 2026 (revisão completa de código)*
