@@ -248,3 +248,53 @@ def tqdm_progress_hook(
         yield
     finally:
         tqdm_module.tqdm = OriginalTqdm
+
+
+class ProgressStreamer:
+    """Streamer for transformers model.generate() that reports progress.
+
+    Implements the BaseStreamer interface (put/end) expected by
+    transformers' generate() method. Counts generated tokens and
+    reports progress as a percentage of max_tokens.
+
+    Used by Granite backend for per-token transcription progress.
+
+    Note:
+        Standalone implementation compatible with transformers BaseStreamer.
+        Does not inherit from BaseStreamer to avoid import dependency.
+    """
+
+    def __init__(
+        self,
+        max_tokens: int,
+        progress_callback: Callable[[str, float], None],
+        stage_name: str = "transcribing",
+    ):
+        """Initialize progress streamer.
+
+        Args:
+            max_tokens: Maximum tokens to generate (for percentage calculation).
+            progress_callback: Callback(stage_name, percent).
+            stage_name: Stage name to report.
+        """
+        self.max_tokens = max_tokens
+        self.tokens_generated = 0
+        self.progress_callback = progress_callback
+        self.stage_name = stage_name
+
+    def put(self, value) -> None:
+        """Called by generate() for each new token batch.
+
+        Args:
+            value: Tensor of newly generated token IDs.
+        """
+        if hasattr(value, "shape") and len(value.shape) > 0:
+            self.tokens_generated += value.shape[0]
+        else:
+            self.tokens_generated += 1
+        pct = (self.tokens_generated / self.max_tokens) * 99
+        self.progress_callback(self.stage_name, min(pct, 99))
+
+    def end(self) -> None:
+        """Called by generate() when generation is complete."""
+        pass

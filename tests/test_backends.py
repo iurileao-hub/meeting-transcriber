@@ -459,3 +459,91 @@ class TestTqdmProgressHook:
 
         # Should not have called callback (no valid percentage)
         callback.assert_not_called()
+
+
+class TestProgressStreamer:
+    """Tests for ProgressStreamer (transformers BaseStreamer)."""
+
+    def test_put_calls_callback_with_progress(self):
+        """Each put() call should report progress percentage."""
+        from src.backends.base import ProgressStreamer
+        import torch
+
+        reported = []
+
+        def callback(stage, pct):
+            reported.append((stage, round(pct, 1)))
+
+        streamer = ProgressStreamer(
+            max_tokens=100,
+            progress_callback=callback,
+            stage_name="transcribing",
+        )
+
+        # Simulate 1 token generated
+        streamer.put(torch.tensor([42]))
+        assert len(reported) == 1
+        assert reported[0] == ("transcribing", 1.0)
+
+        # Simulate 9 more
+        for _ in range(9):
+            streamer.put(torch.tensor([42]))
+        assert len(reported) == 10
+        assert reported[-1] == ("transcribing", 9.9)
+
+    def test_caps_at_99(self):
+        """Should never report more than 99%."""
+        from src.backends.base import ProgressStreamer
+        import torch
+
+        reported = []
+
+        def callback(stage, pct):
+            reported.append(pct)
+
+        streamer = ProgressStreamer(
+            max_tokens=5,
+            progress_callback=callback,
+            stage_name="transcribing",
+        )
+
+        for _ in range(10):  # more than max_tokens
+            streamer.put(torch.tensor([42]))
+
+        assert all(p <= 99 for p in reported)
+
+    def test_end_is_noop(self):
+        """end() should not crash or call callback."""
+        from src.backends.base import ProgressStreamer
+
+        callback = MagicMock()
+        streamer = ProgressStreamer(
+            max_tokens=100,
+            progress_callback=callback,
+            stage_name="transcribing",
+        )
+
+        streamer.end()
+        callback.assert_not_called()
+
+    def test_handles_batch_tokens(self):
+        """Should handle batched token tensors."""
+        from src.backends.base import ProgressStreamer
+        import torch
+
+        reported = []
+
+        def callback(stage, pct):
+            reported.append(pct)
+
+        streamer = ProgressStreamer(
+            max_tokens=100,
+            progress_callback=callback,
+            stage_name="transcribing",
+        )
+
+        # Batch of 5 tokens
+        streamer.put(torch.tensor([1, 2, 3, 4, 5]))
+        assert len(reported) == 1
+        # 5/100 * 99 = 4.95
+        assert round(reported[0], 1) == 5.0
