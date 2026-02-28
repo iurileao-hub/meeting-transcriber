@@ -41,9 +41,7 @@ def get_translator(lang: str | None = None) -> Callable[[str], str]:
         Translator function t(key) -> translated string.
     """
     if lang is None:
-        # Auto-detect from system locale
-        system_locale = locale.getdefaultlocale()[0] or ""
-        lang = "pt" if system_locale.startswith("pt") else "en"
+        lang = detect_system_language()
 
     if lang not in SUPPORTED_LANGUAGES:
         lang = _DEFAULT_LANGUAGE
@@ -53,6 +51,7 @@ def get_translator(lang: str | None = None) -> Callable[[str], str]:
     def translate(key: str) -> str:
         return _get_nested(strings, key)
 
+    translate.lang = lang  # type: ignore[attr-defined]
     return translate
 
 
@@ -62,5 +61,8 @@ def detect_system_language() -> str:
     Returns:
         Language code ('en' or 'pt').
     """
-    system_locale = locale.getdefaultlocale()[0] or ""
+    try:
+        system_locale = locale.getlocale()[0] or ""
+    except Exception:
+        system_locale = ""
     return "pt" if system_locale.startswith("pt") else "en"
