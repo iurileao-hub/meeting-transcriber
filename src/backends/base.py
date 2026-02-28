@@ -69,6 +69,27 @@ class TranscriptionBackend(ABC):
         return self.__class__.__name__.replace("Backend", "")
 
 
+def get_default_device() -> str:
+    """Auto-detect the best available processing device.
+
+    Returns 'mps' on Apple Silicon, 'cuda' with NVIDIA GPUs,
+    or 'cpu' as fallback.
+
+    Returns:
+        Device string: 'mps', 'cuda', or 'cpu'.
+    """
+    try:
+        import torch
+
+        if torch.backends.mps.is_available():
+            return "mps"
+        if torch.cuda.is_available():
+            return "cuda"
+    except (ImportError, AttributeError):
+        pass
+    return "cpu"
+
+
 _hf_compat_applied = False
 
 

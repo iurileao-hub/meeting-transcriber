@@ -32,6 +32,7 @@ if str(_project_root) not in sys.path:
 
 # Phase 3 imports - new features
 from src.backends import get_backend, TranscriptionResult
+from src.backends.base import get_default_device
 from src.i18n import get_translator
 from src.progress import ProgressReporter, Stage
 from src.notify import notify
@@ -364,7 +365,7 @@ def transcribe(
     max_speakers: int | None = None,
     output_dir: str = "data/transcripts",
     output_format: str = "all",
-    device: str = "cpu",
+    device: str | None = None,
     verbose: bool = False,
     mode: str = "meeting",
     translator: Callable[[str], str] | None = None,
@@ -410,6 +411,10 @@ def transcribe(
         raise TranscriptionError("max_speakers must be positive")
     if min_speakers and max_speakers and min_speakers > max_speakers:
         raise TranscriptionError("min_speakers cannot exceed max_speakers")
+
+    # Auto-detect device if not specified
+    if device is None:
+        device = get_default_device()
 
     # Initialize defaults for new parameters
     if translator is None:
@@ -673,9 +678,9 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
     )
     parser.add_argument(
         "--device", "-d",
-        default="cpu",
+        default=None,
         choices=["cpu", "cuda", "mps"],
-        help="Dispositivo de processamento (default: cpu)",
+        help="Dispositivo de processamento (default: auto-detecta mps/cuda/cpu)",
     )
     parser.add_argument(
         "--ui-lang",
@@ -704,6 +709,10 @@ Nota: Requer token HuggingFace configurado no .env para speaker diarization.
     )
 
     args = parser.parse_args()
+
+    # Auto-detect device if not specified
+    if args.device is None:
+        args.device = get_default_device()
 
     # Reconfigurar warnings se modo verbose
     if args.verbose:

@@ -547,3 +547,64 @@ class TestProgressStreamer:
         assert len(reported) == 1
         # 5/100 * 99 = 4.95
         assert round(reported[0], 1) == 5.0
+
+
+class TestGetDefaultDevice:
+    """Tests for get_default_device auto-detection."""
+
+    def test_returns_mps_when_available(self):
+        """Should return 'mps' on Apple Silicon with MPS support."""
+        from src.backends.base import get_default_device
+
+        mock_backends = MagicMock()
+        mock_backends.mps.is_available.return_value = True
+
+        mock_torch = MagicMock()
+        mock_torch.backends = mock_backends
+        mock_torch.cuda.is_available.return_value = False
+
+        with patch.dict("sys.modules", {"torch": mock_torch}):
+            result = get_default_device()
+
+        assert result == "mps"
+
+    def test_returns_cuda_when_available(self):
+        """Should return 'cuda' when CUDA is available but not MPS."""
+        from src.backends.base import get_default_device
+
+        mock_backends = MagicMock()
+        mock_backends.mps.is_available.return_value = False
+
+        mock_torch = MagicMock()
+        mock_torch.backends = mock_backends
+        mock_torch.cuda.is_available.return_value = True
+
+        with patch.dict("sys.modules", {"torch": mock_torch}):
+            result = get_default_device()
+
+        assert result == "cuda"
+
+    def test_returns_cpu_as_fallback(self):
+        """Should return 'cpu' when no GPU is available."""
+        from src.backends.base import get_default_device
+
+        mock_backends = MagicMock()
+        mock_backends.mps.is_available.return_value = False
+
+        mock_torch = MagicMock()
+        mock_torch.backends = mock_backends
+        mock_torch.cuda.is_available.return_value = False
+
+        with patch.dict("sys.modules", {"torch": mock_torch}):
+            result = get_default_device()
+
+        assert result == "cpu"
+
+    def test_returns_cpu_when_torch_unavailable(self):
+        """Should return 'cpu' if torch can't be imported."""
+        from src.backends.base import get_default_device
+
+        with patch.dict("sys.modules", {"torch": None}):
+            result = get_default_device()
+
+        assert result == "cpu"
