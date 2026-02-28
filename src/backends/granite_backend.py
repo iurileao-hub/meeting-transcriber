@@ -1,11 +1,8 @@
 # src/backends/granite_backend.py
 """Granite backend for precise mode (high accuracy)."""
+import bisect
 import gc
-import os
 import re
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from .base import (
     TranscriptionBackend,
@@ -18,12 +15,10 @@ from .base import (
 try:
     from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
     import torch
-    import torchaudio
 except ImportError:
     AutoProcessor = None  # type: ignore[assignment,misc]
     AutoModelForSpeechSeq2Seq = None  # type: ignore[assignment,misc]
     torch = None  # type: ignore[assignment]
-    torchaudio = None  # type: ignore[assignment]
 
 try:
     from whisperx.diarize import DiarizationPipeline
@@ -66,9 +61,9 @@ class GraniteBackend(TranscriptionBackend):
             Granite 8B requires ~16GB RAM. For machines with less memory,
             use --mode meeting (WhisperX) instead.
         """
+        super().__init__(hf_token=hf_token)
         self.model_name = model_name
         self.device = device
-        self._hf_token = hf_token
 
     def is_available(self) -> bool:
         """Check if required packages are available.
@@ -78,29 +73,13 @@ class GraniteBackend(TranscriptionBackend):
         """
         return AutoProcessor is not None
 
-    def _load_hf_token(self) -> str:
-        """Load HuggingFace token from environment."""
-        if self._hf_token:
-            return self._hf_token
-
-        env_file = Path(__file__).parent.parent.parent / ".env"
-        load_dotenv(env_file)
-
-        token = os.getenv("HF_TOKEN")
-        if not token:
-            raise ValueError(
-                "HuggingFace token not found.\n"
-                "Set HF_TOKEN in .env or pass hf_token parameter."
-            )
-        return token
-
     @property
     def supports_diarization(self) -> bool:
         return True  # Via separate pyannote pipeline
 
     @property
     def total_stages(self) -> int:
-        return 4  # loading → transcribing → diarizing → saving
+        return 4  # loading -> transcribing -> diarizing -> saving
 
     def transcribe(
         self,
@@ -132,8 +111,10 @@ class GraniteBackend(TranscriptionBackend):
         if not self.is_available():
             raise ImportError(
                 "transformers not installed.\n"
-                "Install with: pip install transformers accelerate torchaudio"
+                "Install with: pip install transformers accelerate"
             )
+
+        import numpy as np
 
         # Stage 1: Load Granite model
         if progress_callback:
@@ -161,27 +142,17 @@ class GraniteBackend(TranscriptionBackend):
         if progress_callback:
             progress_callback("transcribing", 0)
 
-        # Load audio with torchaudio (Granite requires mono 16kHz)
-        # normalize=True ensures audio values are in [-1, 1] range
-        wav, sr = torchaudio.load(audio_path, normalize=True)
+        # Load audio once (whisperx outputs 16kHz float32 mono numpy array)
+        audio_np = whisperx.load_audio(audio_path)
+        audio_duration = len(audio_np) / 16000
 
-        # Convert to mono if stereo
-        if wav.shape[0] > 1:
-            wav = wav.mean(dim=0, keepdim=True)
-
-        # Resample to 16kHz if needed
-        if sr != 16000:
-            resampler = torchaudio.transforms.Resample(sr, 16000)
-            wav = resampler(wav)
-            sr = 16000
+        # Convert to tensor for Granite processor
+        wav = torch.from_numpy(audio_np).unsqueeze(0)  # [1, N]
 
         # Normalize audio to peak amplitude (avoid division by zero for silent audio)
         max_val = wav.abs().max()
         if max_val > 0:
             wav = wav / max_val
-        # If max_val is 0, audio is silent - keep as-is (will produce empty transcription)
-
-        audio_duration = wav.shape[1] / sr
 
         # Granite uses a chat-based interface with audio
         system_prompt = "You are a helpful AI assistant for transcription."
@@ -242,23 +213,17 @@ class GraniteBackend(TranscriptionBackend):
         # Ensure compatibility with newer huggingface_hub versions
         patch_hf_hub_compat()
 
-        audio = whisperx.load_audio(audio_path)
-
         diarize_model = DiarizationPipeline(
             use_auth_token=hf_token,
             device=self.device,
         )
 
-        diarize_kwargs = {}
-        if num_speakers:
-            diarize_kwargs["num_speakers"] = num_speakers
-        if min_speakers:
-            diarize_kwargs["min_speakers"] = min_speakers
-        if max_speakers:
-            diarize_kwargs["max_speakers"] = max_speakers
+        diarize_kwargs = self._build_diarize_kwargs(
+            num_speakers, min_speakers, max_speakers
+        )
 
         with diarization_progress_hook(progress_callback, "diarizing"):
-            diarize_segments = diarize_model(audio, **diarize_kwargs)
+            diarize_segments = diarize_model(audio_np, **diarize_kwargs)
 
         if progress_callback:
             progress_callback("diarizing", 100)
@@ -281,12 +246,13 @@ class GraniteBackend(TranscriptionBackend):
 
         return TranscriptionResult(
             segments=segments,
-            language=language or "en",  # Granite focuses on English
+            language=language or "en",
             metadata={
                 "model": self.model_name,
                 "device": self.device,
                 "num_speakers": len(speakers),
                 "backend": "granite",
+                "language_detection": "user_specified" if language else "defaulted_to_en",
             },
         )
 
@@ -366,6 +332,9 @@ class GraniteBackend(TranscriptionBackend):
         # Sort by start time
         diarize_timeline.sort(key=lambda x: x[0])
 
+        # Pre-extract start times for binary search
+        d_starts = [t[0] for t in diarize_timeline]
+
         # Distribute sentences proportionally across audio duration
         # Estimate: each sentence takes proportional time based on character count
         total_chars = sum(len(s) for s in sentences)
@@ -385,7 +354,7 @@ class GraniteBackend(TranscriptionBackend):
 
             # Find speaker with most overlap in this time range
             speaker = self._find_dominant_speaker(
-                start_time, end_time, diarize_timeline
+                start_time, end_time, diarize_timeline, d_starts
             )
 
             segments.append({
@@ -404,21 +373,31 @@ class GraniteBackend(TranscriptionBackend):
         start: float,
         end: float,
         diarize_timeline: list[tuple[float, float, str]],
+        d_starts: list[float] | None = None,
     ) -> str:
         """Find the speaker with most overlap in a time range.
+
+        Uses binary search for efficient lookup when d_starts is provided.
 
         Args:
             start: Segment start time.
             end: Segment end time.
             diarize_timeline: List of (start, end, speaker) tuples.
+            d_starts: Pre-extracted start times for binary search.
 
         Returns:
             Speaker label with most overlap, or 'SPEAKER_00' if none.
         """
-        speaker_overlap = {}
+        if d_starts is None:
+            d_starts = [t[0] for t in diarize_timeline]
 
-        for d_start, d_end, speaker in diarize_timeline:
-            # Calculate overlap
+        # Find range of segments that could overlap using binary search
+        # A segment overlaps if d_start < end AND d_end > start
+        idx = bisect.bisect_right(d_starts, end)
+
+        speaker_overlap: dict[str, float] = {}
+        for i in range(max(0, bisect.bisect_left(d_starts, start) - 1), idx):
+            d_start, d_end, speaker = diarize_timeline[i]
             overlap_start = max(start, d_start)
             overlap_end = min(end, d_end)
             overlap = max(0, overlap_end - overlap_start)

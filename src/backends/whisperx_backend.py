@@ -1,11 +1,7 @@
 """WhisperX backend for meeting mode (with diarization)."""
 import builtins
 import gc
-import os
 import re
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from .base import (
     TranscriptionBackend,
@@ -40,11 +36,11 @@ class WhisperXBackend(TranscriptionBackend):
             batch_size: Batch size for processing. Auto-detected if None.
             hf_token: HuggingFace token for pyannote. Loaded from env if None.
         """
+        super().__init__(hf_token=hf_token)
         self.model_size = model_size
         self.device = device
         self.compute_type = compute_type or self._get_compute_type()
         self.batch_size = batch_size or self._get_batch_size()
-        self._hf_token = hf_token
 
     def _get_compute_type(self) -> str:
         """Get optimal compute type for device."""
@@ -58,30 +54,13 @@ class WhisperXBackend(TranscriptionBackend):
             return 32
         return 16
 
-    def _load_hf_token(self) -> str:
-        """Load HuggingFace token from environment or .env file."""
-        if self._hf_token:
-            return self._hf_token
-
-        env_file = Path(__file__).parent.parent.parent / ".env"
-        load_dotenv(env_file)
-
-        token = os.getenv("HF_TOKEN")
-        if not token:
-            raise ValueError(
-                "HuggingFace token not found.\n"
-                "Set HF_TOKEN in .env or pass hf_token parameter.\n"
-                "Get your token at: https://huggingface.co/settings/tokens"
-            )
-        return token
-
     @property
     def supports_diarization(self) -> bool:
         return True
 
     @property
     def total_stages(self) -> int:
-        return 6  # loading → vad → transcribing → aligning → diarizing → saving
+        return 6  # loading -> vad -> transcribing -> aligning -> diarizing -> saving
 
     def transcribe(
         self,
@@ -201,13 +180,9 @@ class WhisperXBackend(TranscriptionBackend):
             device=self.device,
         )
 
-        diarize_kwargs = {}
-        if num_speakers:
-            diarize_kwargs["num_speakers"] = num_speakers
-        if min_speakers:
-            diarize_kwargs["min_speakers"] = min_speakers
-        if max_speakers:
-            diarize_kwargs["max_speakers"] = max_speakers
+        diarize_kwargs = self._build_diarize_kwargs(
+            num_speakers, min_speakers, max_speakers
+        )
 
         with diarization_progress_hook(progress_callback, "diarizing"):
             diarize_segments = diarize_model(audio, **diarize_kwargs)

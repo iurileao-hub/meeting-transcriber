@@ -99,7 +99,7 @@ class TestMLXModelRepos:
 
 
 class TestMLXBackendHfToken:
-    """Test HuggingFace token loading."""
+    """Test HuggingFace token loading (via base class _load_hf_token)."""
 
     def test_load_hf_token_returns_stored_token(self):
         backend = MLXBackend(hf_token="hf_test123")
@@ -109,8 +109,8 @@ class TestMLXBackendHfToken:
         monkeypatch.delenv("HF_TOKEN", raising=False)
         from unittest.mock import patch
         backend = MLXBackend()
-        # Patch load_dotenv to prevent .env file from setting HF_TOKEN
-        with patch("src.backends.mlx_backend.load_dotenv"):
+        # Patch load_dotenv on the base module (where _load_hf_token lives now)
+        with patch("src.backends.base.load_dotenv"):
             with pytest.raises(ValueError, match="HuggingFace token not found"):
                 backend._load_hf_token()
 

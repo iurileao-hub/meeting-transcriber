@@ -1,24 +1,11 @@
 """Transcription backends for Meeting Transcriber."""
 from .base import TranscriptionBackend, TranscriptionResult
-from .whisperx_backend import WhisperXBackend
-from .mlx_backend import MLXBackend
-from .granite_backend import GraniteBackend
 
 __all__ = [
     "TranscriptionBackend",
     "TranscriptionResult",
-    "WhisperXBackend",
-    "MLXBackend",
-    "GraniteBackend",
     "get_backend",
 ]
-
-# Mode to backend mapping
-_BACKENDS = {
-    "fast": MLXBackend,
-    "meeting": WhisperXBackend,
-    "precise": GraniteBackend,
-}
 
 
 def get_backend(mode: str, **kwargs) -> TranscriptionBackend:
@@ -35,24 +22,43 @@ def get_backend(mode: str, **kwargs) -> TranscriptionBackend:
         Configured TranscriptionBackend instance.
 
     Raises:
-        ValueError: If mode is not recognized.
+        ValueError: If mode is not recognized or backend is unavailable.
 
     Example:
         >>> backend = get_backend("meeting", device="mps", model_size="large-v3")
         >>> backend = get_backend("precise", device="cpu", hf_token="hf_xxx")
     """
-    if mode not in _BACKENDS:
-        valid_modes = ", ".join(_BACKENDS.keys())
+    _BACKEND_PARAMS = {
+        "fast": {"model_size", "enable_diarization", "device", "hf_token"},
+        "meeting": {"model_size", "device", "compute_type", "batch_size", "hf_token"},
+        "precise": {"model_name", "device", "hf_token"},
+    }
+
+    if mode not in _BACKEND_PARAMS:
+        valid_modes = ", ".join(_BACKEND_PARAMS.keys())
         raise ValueError(f"Invalid mode: '{mode}'. Choose from: {valid_modes}")
 
-    backend_class = _BACKENDS[mode]
+    # Lazy imports — only load the requested backend
+    if mode == "fast":
+        from .mlx_backend import MLXBackend
 
-    # Filter kwargs to only include parameters accepted by this backend's __init__
-    # This prevents TypeError from unexpected keyword arguments
-    import inspect
-    sig = inspect.signature(backend_class.__init__)
-    valid_params = set(sig.parameters.keys()) - {"self"}
+        backend_class = MLXBackend
+    elif mode == "meeting":
+        from .whisperx_backend import WhisperXBackend
 
+        backend_class = WhisperXBackend
+    elif mode == "precise":
+        from .granite_backend import GraniteBackend
+
+        backend_class = GraniteBackend
+
+    valid_params = _BACKEND_PARAMS[mode]
     filtered_kwargs = {k: v for k, v in kwargs.items() if k in valid_params}
 
-    return backend_class(**filtered_kwargs)
+    backend = backend_class(**filtered_kwargs)
+    if not backend.is_available():
+        raise ValueError(
+            f"Backend '{mode}' is not available. "
+            f"Install missing dependencies. See README for details."
+        )
+    return backend

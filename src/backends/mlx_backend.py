@@ -1,10 +1,6 @@
 # src/backends/mlx_backend.py
 """MLX-Whisper backend for fast mode (Apple Silicon optimized)."""
 import gc
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
 
 from .base import (
     TranscriptionBackend,
@@ -14,7 +10,7 @@ from .base import (
     tqdm_progress_hook,
 )
 
-# Model name → HuggingFace repo mapping
+# Model name -> HuggingFace repo mapping
 MLX_MODEL_REPOS = {
     # Standard
     "tiny": "mlx-community/whisper-tiny-mlx",
@@ -52,10 +48,10 @@ class MLXBackend(TranscriptionBackend):
             device: Processing device for diarization (cpu, cuda, mps).
             hf_token: HuggingFace token for pyannote. Loaded from env if None.
         """
+        super().__init__(hf_token=hf_token)
         self.model_size = model_size
         self._enable_diarization = enable_diarization
         self.device = device
-        self._hf_token = hf_token
 
     def is_available(self) -> bool:
         """Check if MLX-Whisper is available.
@@ -68,23 +64,6 @@ class MLXBackend(TranscriptionBackend):
             return True
         except ImportError:
             return False
-
-    def _load_hf_token(self) -> str:
-        """Load HuggingFace token from environment or .env file."""
-        if self._hf_token:
-            return self._hf_token
-
-        env_file = Path(__file__).parent.parent.parent / ".env"
-        load_dotenv(env_file)
-
-        token = os.getenv("HF_TOKEN")
-        if not token:
-            raise ValueError(
-                "HuggingFace token not found.\n"
-                "Set HF_TOKEN in .env or pass hf_token parameter.\n"
-                "Get your token at: https://huggingface.co/settings/tokens"
-            )
-        return token
 
     def _get_model_repo(self) -> str:
         """Get HuggingFace repo name for the model size.
@@ -109,8 +88,8 @@ class MLXBackend(TranscriptionBackend):
 
     @property
     def total_stages(self) -> int:
-        # With diarization: loading → transcribing → diarizing → saving
-        # Without: loading → transcribing → saving
+        # With diarization: loading -> transcribing -> diarizing -> saving
+        # Without: loading -> transcribing -> saving
         return 4 if self._enable_diarization else 3
 
     def transcribe(
@@ -236,13 +215,9 @@ class MLXBackend(TranscriptionBackend):
             device=self.device,
         )
 
-        diarize_kwargs = {}
-        if num_speakers:
-            diarize_kwargs["num_speakers"] = num_speakers
-        if min_speakers:
-            diarize_kwargs["min_speakers"] = min_speakers
-        if max_speakers:
-            diarize_kwargs["max_speakers"] = max_speakers
+        diarize_kwargs = self._build_diarize_kwargs(
+            num_speakers, min_speakers, max_speakers
+        )
 
         with diarization_progress_hook(progress_callback, "diarizing"):
             diarize_segments = diarize_model(audio, **diarize_kwargs)

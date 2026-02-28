@@ -220,9 +220,44 @@ class TestFindDominantSpeaker:
         speaker = backend._find_dominant_speaker(0.0, 5.0, timeline)
         assert speaker == "SPEAKER_00"
 
+    def test_with_d_starts_binary_search(self):
+        """Test that d_starts parameter enables binary search path."""
+        backend = GraniteBackend()
+        timeline = [
+            (0.0, 3.0, "SPEAKER_01"),
+            (3.0, 6.0, "SPEAKER_02"),
+            (6.0, 10.0, "SPEAKER_01"),
+        ]
+        d_starts = [0.0, 3.0, 6.0]
+
+        speaker = backend._find_dominant_speaker(4.0, 8.0, timeline, d_starts)
+        # SPEAKER_02: overlap 3-6 with 4-8 = 2s
+        # SPEAKER_01: overlap 6-10 with 4-8 = 2s
+        # When tied, max() returns whichever comes first in iteration
+        assert speaker in ("SPEAKER_01", "SPEAKER_02")
+
+    def test_binary_search_matches_linear_search(self):
+        """Binary search with d_starts should give same results as without."""
+        backend = GraniteBackend()
+        timeline = [
+            (0.0, 5.0, "SPEAKER_01"),
+            (4.0, 8.0, "SPEAKER_02"),
+            (7.0, 10.0, "SPEAKER_01"),
+        ]
+        d_starts = [0.0, 4.0, 7.0]
+
+        # Test several ranges
+        for start, end in [(0.0, 3.0), (3.0, 6.0), (6.0, 9.0), (0.0, 10.0)]:
+            result_with = backend._find_dominant_speaker(start, end, timeline, d_starts)
+            result_without = backend._find_dominant_speaker(start, end, timeline)
+            assert result_with == result_without, (
+                f"Mismatch for ({start}, {end}): "
+                f"with={result_with}, without={result_without}"
+            )
+
 
 class TestHFTokenLoading:
-    """Test HuggingFace token loading."""
+    """Test HuggingFace token loading (via base class _load_hf_token)."""
 
     def test_uses_provided_token(self):
         backend = GraniteBackend(hf_token="my_test_token")
@@ -236,7 +271,7 @@ class TestHFTokenLoading:
         assert token == "env_token"
 
     @patch.dict("os.environ", {}, clear=True)
-    @patch("src.backends.granite_backend.load_dotenv")
+    @patch("src.backends.base.load_dotenv")
     def test_raises_on_missing_token(self, mock_dotenv):
         # Clear the HF_TOKEN from environment
         import os
@@ -336,6 +371,7 @@ class TestGraniteGranularProgress:
     def test_transcribe_passes_streamer_to_generate(self):
         """model.generate() should receive a ProgressStreamer."""
         from src.backends.base import ProgressStreamer
+        import numpy as np
 
         # Mock all heavy dependencies
         mock_processor = MagicMock()
@@ -355,10 +391,12 @@ class TestGraniteGranularProgress:
 
         callback = MagicMock()
 
+        # Create a mock audio numpy array
+        mock_audio_np = np.zeros(16000, dtype=np.float32)
+
         with patch("src.backends.granite_backend.AutoProcessor", create=True) as mock_ap, \
              patch("src.backends.granite_backend.AutoModelForSpeechSeq2Seq", create=True) as mock_am, \
              patch("src.backends.granite_backend.torch", create=True) as mock_torch, \
-             patch("src.backends.granite_backend.torchaudio", create=True) as mock_ta, \
              patch("src.backends.granite_backend.whisperx", create=True) as mock_wx, \
              patch("src.backends.granite_backend.DiarizationPipeline", create=True) as mock_dp, \
              patch("src.backends.granite_backend.patch_hf_hub_compat"), \
@@ -367,11 +405,14 @@ class TestGraniteGranularProgress:
             mock_ap.from_pretrained.return_value = mock_processor
             mock_am.from_pretrained.return_value = mock_model
 
+            # Mock whisperx.load_audio to return numpy array
+            mock_wx.load_audio.return_value = mock_audio_np
+
             # Create a mock wav tensor that behaves like a real tensor
             mock_wav = MagicMock()
             mock_wav.shape = (1, 16000)  # mono, 1 second at 16kHz
             mock_wav.abs.return_value.max.return_value = 1.0
-            mock_ta.load.return_value = (mock_wav, 16000)
+            mock_torch.from_numpy.return_value.unsqueeze.return_value = mock_wav
 
             mock_torch.no_grad.return_value.__enter__ = MagicMock()
             mock_torch.no_grad.return_value.__exit__ = MagicMock()
@@ -389,3 +430,111 @@ class TestGraniteGranularProgress:
             generate_call = mock_model.generate.call_args
             assert "streamer" in generate_call.kwargs
             assert isinstance(generate_call.kwargs["streamer"], ProgressStreamer)
+
+
+class TestGraniteLanguageMetadata:
+    """Test language detection metadata in result."""
+
+    def test_language_detection_user_specified(self):
+        """When language is explicitly provided, metadata should say user_specified."""
+        import numpy as np
+
+        mock_processor = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_processor.tokenizer = mock_tokenizer
+        mock_tokenizer.apply_chat_template.return_value = "prompt"
+
+        mock_model = MagicMock()
+        mock_outputs = MagicMock()
+        mock_outputs.__getitem__ = MagicMock(return_value=MagicMock())
+        mock_model.generate.return_value = mock_outputs
+
+        mock_inputs = MagicMock()
+        mock_inputs.__getitem__ = MagicMock(return_value=MagicMock(shape=(1, 10)))
+        mock_inputs.to.return_value = mock_inputs
+        mock_processor.return_value = mock_inputs
+
+        mock_audio_np = np.zeros(16000, dtype=np.float32)
+
+        with patch("src.backends.granite_backend.AutoProcessor", create=True) as mock_ap, \
+             patch("src.backends.granite_backend.AutoModelForSpeechSeq2Seq", create=True) as mock_am, \
+             patch("src.backends.granite_backend.torch", create=True) as mock_torch, \
+             patch("src.backends.granite_backend.whisperx", create=True) as mock_wx, \
+             patch("src.backends.granite_backend.DiarizationPipeline", create=True) as mock_dp, \
+             patch("src.backends.granite_backend.patch_hf_hub_compat"), \
+             patch("src.backends.granite_backend.diarization_progress_hook"):
+
+            mock_ap.from_pretrained.return_value = mock_processor
+            mock_am.from_pretrained.return_value = mock_model
+            mock_wx.load_audio.return_value = mock_audio_np
+
+            mock_wav = MagicMock()
+            mock_wav.shape = (1, 16000)
+            mock_wav.abs.return_value.max.return_value = 1.0
+            mock_torch.from_numpy.return_value.unsqueeze.return_value = mock_wav
+            mock_torch.no_grad.return_value.__enter__ = MagicMock()
+            mock_torch.no_grad.return_value.__exit__ = MagicMock()
+            mock_torch.float32 = "float32"
+            mock_torch.bfloat16 = "bfloat16"
+
+            backend = GraniteBackend(hf_token="test")
+
+            with patch.object(backend, "is_available", return_value=True), \
+                 patch.object(backend, "_align_transcription_with_diarization",
+                              return_value=[{"start": 0, "end": 1, "text": "t", "speaker": "S0"}]):
+                result = backend.transcribe("test.wav", language="pt")
+
+            assert result.language == "pt"
+            assert result.metadata["language_detection"] == "user_specified"
+
+    def test_language_detection_defaulted(self):
+        """When no language is provided, metadata should say defaulted_to_en."""
+        import numpy as np
+
+        mock_processor = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_processor.tokenizer = mock_tokenizer
+        mock_tokenizer.apply_chat_template.return_value = "prompt"
+
+        mock_model = MagicMock()
+        mock_outputs = MagicMock()
+        mock_outputs.__getitem__ = MagicMock(return_value=MagicMock())
+        mock_model.generate.return_value = mock_outputs
+
+        mock_inputs = MagicMock()
+        mock_inputs.__getitem__ = MagicMock(return_value=MagicMock(shape=(1, 10)))
+        mock_inputs.to.return_value = mock_inputs
+        mock_processor.return_value = mock_inputs
+
+        mock_audio_np = np.zeros(16000, dtype=np.float32)
+
+        with patch("src.backends.granite_backend.AutoProcessor", create=True) as mock_ap, \
+             patch("src.backends.granite_backend.AutoModelForSpeechSeq2Seq", create=True) as mock_am, \
+             patch("src.backends.granite_backend.torch", create=True) as mock_torch, \
+             patch("src.backends.granite_backend.whisperx", create=True) as mock_wx, \
+             patch("src.backends.granite_backend.DiarizationPipeline", create=True) as mock_dp, \
+             patch("src.backends.granite_backend.patch_hf_hub_compat"), \
+             patch("src.backends.granite_backend.diarization_progress_hook"):
+
+            mock_ap.from_pretrained.return_value = mock_processor
+            mock_am.from_pretrained.return_value = mock_model
+            mock_wx.load_audio.return_value = mock_audio_np
+
+            mock_wav = MagicMock()
+            mock_wav.shape = (1, 16000)
+            mock_wav.abs.return_value.max.return_value = 1.0
+            mock_torch.from_numpy.return_value.unsqueeze.return_value = mock_wav
+            mock_torch.no_grad.return_value.__enter__ = MagicMock()
+            mock_torch.no_grad.return_value.__exit__ = MagicMock()
+            mock_torch.float32 = "float32"
+            mock_torch.bfloat16 = "bfloat16"
+
+            backend = GraniteBackend(hf_token="test")
+
+            with patch.object(backend, "is_available", return_value=True), \
+                 patch.object(backend, "_align_transcription_with_diarization",
+                              return_value=[{"start": 0, "end": 1, "text": "t", "speaker": "S0"}]):
+                result = backend.transcribe("test.wav")
+
+            assert result.language == "en"
+            assert result.metadata["language_detection"] == "defaulted_to_en"
