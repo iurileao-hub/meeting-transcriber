@@ -242,3 +242,47 @@ class TestStagnationDetection:
         # Should not be stagnant after advance
         reporter._current_percent = 0
         assert reporter._is_stagnant() is False
+
+
+class TestAdvanceForceRender:
+    """Tests for advance() forced 100% render."""
+
+    def test_advance_forces_100_percent_render(self):
+        """advance() should force-render at 100% even if throttled."""
+        buf = StringIO()
+        reporter = ProgressReporter(total_stages=4, lang="en", file=buf)
+        reporter.update(Stage.LOADING, 30)
+        # Simulate throttle: set last render time to now so next update would be throttled
+        reporter._last_render_time = time.monotonic()
+        reporter.advance()
+        output = buf.getvalue()
+        # The final render before the newline should show 100%
+        assert "100%" in output
+
+    def test_advance_clears_remaining_time_at_100(self):
+        """At 100%, remaining time should not appear in the rendered line."""
+        buf = StringIO()
+        reporter = ProgressReporter(total_stages=4, lang="en", file=buf)
+        reporter.update(Stage.DIARIZING, 50)
+        # Let some time pass so ETA is calculated
+        reporter._stage_start_time = time.monotonic() - 60
+        reporter._last_render_time = 0  # Allow render
+        reporter.update(Stage.DIARIZING, 50)
+        # Now advance — should render at 100% without remaining time
+        reporter.advance()
+        # Get the last line before the newline
+        output = buf.getvalue()
+        # Split by \r to get individual renders, last non-empty before \n
+        renders = [r for r in output.split("\r") if r.strip()]
+        last_render = renders[-1] if renders else ""
+        assert "100%" in last_render
+        assert "remaining" not in last_render
+        assert "restante" not in last_render
+
+    def test_advance_without_prior_stage_is_safe(self):
+        """advance() should work even if no stage was started."""
+        buf = StringIO()
+        reporter = ProgressReporter(total_stages=4, lang="en", file=buf)
+        # No update called, _current_stage is None
+        reporter.advance()  # Should not raise
+        assert reporter.current_stage == 2

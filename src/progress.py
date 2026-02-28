@@ -182,10 +182,11 @@ class ProgressReporter:
         label = stage.label(self.lang)
         bar = self._render_bar(percent)
         time_info = self._format_time_info(percent)
-        # Pad with spaces to clear previous longer lines
+        # \033[K clears from cursor to end of line, preventing ghost text
+        # from longer previous renders
         line = (
             f"\r{spinner} [{self.current_stage}/{self.total_stages}] "
-            f"{label}... {bar} {percent:.0f}%  {time_info}    "
+            f"{label}... {bar} {percent:.0f}%  {time_info}\033[K"
         )
         self._stdout.write(line)
         self._stdout.flush()
@@ -210,8 +211,17 @@ class ProgressReporter:
         self._start_ticker()
 
     def advance(self) -> None:
-        """Move to next stage."""
+        """Move to next stage.
+
+        Forces a final render at 100% before advancing, ensuring the
+        completed stage always displays 100% regardless of throttle state.
+        """
         self._stop_ticker()
+        with self._lock:
+            if self._current_stage is not None:
+                self._current_percent = 100
+                self._last_pct_change_time = time.monotonic()
+                self._render()
         self.current_stage += 1
         self._stage_start_time = time.monotonic()
         self._last_pct_change_time = time.monotonic()
