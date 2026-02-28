@@ -11,6 +11,7 @@ from .base import (
     TranscriptionResult,
     diarization_progress_hook,
     patch_hf_hub_compat,
+    tqdm_progress_hook,
 )
 
 # Model name → HuggingFace repo mapping
@@ -159,12 +160,13 @@ class MLXBackend(TranscriptionBackend):
         if progress_callback:
             progress_callback("transcribing", 0)
 
-        result = mlx_whisper.transcribe(
-            audio_path,
-            path_or_hf_repo=model_name,
-            language=language,
-            word_timestamps=self._enable_diarization,
-        )
+        with tqdm_progress_hook(progress_callback, "transcribing"):
+            result = mlx_whisper.transcribe(
+                audio_path,
+                path_or_hf_repo=model_name,
+                language=language,
+                word_timestamps=self._enable_diarization,
+            )
 
         if progress_callback:
             progress_callback("transcribing", 100)

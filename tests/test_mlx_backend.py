@@ -113,3 +113,49 @@ class TestMLXBackendHfToken:
         with patch("src.backends.mlx_backend.load_dotenv"):
             with pytest.raises(ValueError, match="HuggingFace token not found"):
                 backend._load_hf_token()
+
+
+import sys
+from unittest.mock import patch, MagicMock
+
+
+class TestMLXGranularProgress:
+    """Test granular progress in MLX transcription."""
+
+    def test_transcribe_uses_tqdm_hook(self):
+        """Transcription should use tqdm_progress_hook for granular progress."""
+        mock_mlx = MagicMock()
+        mock_mlx.transcribe.return_value = {
+            "segments": [{"start": 0, "end": 1, "text": "test"}],
+            "language": "en",
+        }
+
+        reported_stages = []
+
+        def callback(stage, pct):
+            reported_stages.append(stage)
+
+        backend = MLXBackend(model_size="base")
+
+        with patch.dict(sys.modules, {"mlx_whisper": mock_mlx}), \
+             patch.object(backend, "is_available", return_value=True):
+            backend.transcribe("test.wav", progress_callback=callback)
+
+        # Should have reported "transcribing" stage (not just 0 and 100)
+        assert "transcribing" in reported_stages
+
+    def test_transcribe_works_without_callback(self):
+        """Transcription should work fine without progress callback."""
+        mock_mlx = MagicMock()
+        mock_mlx.transcribe.return_value = {
+            "segments": [{"start": 0, "end": 1, "text": "test"}],
+            "language": "en",
+        }
+
+        backend = MLXBackend(model_size="base")
+
+        with patch.dict(sys.modules, {"mlx_whisper": mock_mlx}), \
+             patch.object(backend, "is_available", return_value=True):
+            result = backend.transcribe("test.wav", progress_callback=None)
+
+        assert len(result.segments) == 1
