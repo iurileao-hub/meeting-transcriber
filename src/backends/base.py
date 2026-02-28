@@ -206,3 +206,45 @@ def pyannote_progress_hook(
         yield
     finally:
         Inference.slide = original_slide
+
+
+@contextmanager
+def tqdm_progress_hook(
+    progress_callback: Callable[[str, float], None] | None,
+    stage_name: str,
+):
+    """Intercept tqdm progress bars to forward updates to progress_callback.
+
+    Temporarily replaces tqdm.tqdm with a subclass that intercepts update()
+    calls, converting frame-level progress into percentage-based callbacks.
+    Used by MLX backend to capture mlx_whisper's internal progress bar.
+
+    Args:
+        progress_callback: Callback(stage_name, percent) or None.
+        stage_name: Stage name to report (e.g., 'transcribing').
+    """
+    if not progress_callback:
+        yield
+        return
+
+    import tqdm as tqdm_module
+
+    OriginalTqdm = tqdm_module.tqdm
+
+    class _ProgressTqdm(OriginalTqdm):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._hook_n = 0
+
+        def update(self, n=1):
+            super().update(n)
+            self._hook_n += n
+            if self.total and self.total > 0:
+                pct = (self._hook_n / self.total) * 99
+                progress_callback(stage_name, min(pct, 99))
+
+    tqdm_module.tqdm = _ProgressTqdm
+    try:
+        yield
+    finally:
+        tqdm_module.tqdm = OriginalTqdm

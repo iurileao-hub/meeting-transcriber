@@ -383,3 +383,79 @@ class TestHfHubCompatPatch:
                 revision="main",
                 cache_dir="/tmp",
             )
+
+
+class TestTqdmProgressHook:
+    """Tests for tqdm_progress_hook context manager."""
+
+    def test_noop_when_no_callback(self):
+        """Should yield without error when callback is None."""
+        from src.backends.base import tqdm_progress_hook
+
+        with tqdm_progress_hook(None, "transcribing"):
+            pass  # No error
+
+    def test_restores_original_tqdm_after_context(self):
+        """Should restore tqdm.tqdm after context exits."""
+        from src.backends.base import tqdm_progress_hook
+        import tqdm as tqdm_module
+
+        original = tqdm_module.tqdm
+        callback = MagicMock()
+
+        with tqdm_progress_hook(callback, "transcribing"):
+            assert tqdm_module.tqdm is not original
+
+        assert tqdm_module.tqdm is original
+
+    def test_intercepts_tqdm_update_calls(self):
+        """Should forward tqdm update() calls to progress_callback."""
+        from src.backends.base import tqdm_progress_hook
+        import tqdm as tqdm_module
+
+        reported = []
+
+        def callback(stage, pct):
+            reported.append((stage, round(pct, 1)))
+
+        with tqdm_progress_hook(callback, "transcribing"):
+            bar = tqdm_module.tqdm(total=100, disable=True)
+            bar.update(50)  # 50%
+            bar.update(30)  # 80%
+            bar.close()
+
+        assert len(reported) == 2
+        assert reported[0] == ("transcribing", 49.5)
+        assert reported[1] == ("transcribing", 79.2)
+
+    def test_caps_at_99_percent(self):
+        """Should never report more than 99%."""
+        from src.backends.base import tqdm_progress_hook
+        import tqdm as tqdm_module
+
+        reported = []
+
+        def callback(stage, pct):
+            reported.append(pct)
+
+        with tqdm_progress_hook(callback, "transcribing"):
+            bar = tqdm_module.tqdm(total=100, disable=True)
+            bar.update(100)  # 100% -> capped at 99
+            bar.close()
+
+        assert all(p <= 99 for p in reported)
+
+    def test_handles_zero_total(self):
+        """Should not crash when tqdm total is 0 or None."""
+        from src.backends.base import tqdm_progress_hook
+        import tqdm as tqdm_module
+
+        callback = MagicMock()
+
+        with tqdm_progress_hook(callback, "transcribing"):
+            bar = tqdm_module.tqdm(total=0, disable=True)
+            bar.update(1)
+            bar.close()
+
+        # Should not have called callback (no valid percentage)
+        callback.assert_not_called()
