@@ -53,6 +53,7 @@ def get_translator(lang: str | None = None) -> Callable[[str], str]:
     def translate(key: str) -> str:
         return _get_nested(strings, key)
 
+    translate.lang = lang
     return translate
 
 
