@@ -1,39 +1,34 @@
 """Custom vocabulary support for transcription."""
+import logging
 from pathlib import Path
 
 
-# Sensitive path prefixes that should not be read as vocabulary files (security)
-# These are prefixes, not exact paths
-# Note: macOS resolves /var to /private/var, so we include both variants
-FORBIDDEN_VOCAB_PREFIXES = [
-    "/etc/passwd",
-    "/etc/shadow",
-    "/etc/sudoers",
-    "/etc/ssh",
-    "/root",
-    "/var/log",
-    "/private/var/log",  # macOS resolved path
-    "/Library/Keychains",  # macOS
-]
+logger = logging.getLogger(__name__)
+
+MAX_VOCAB_FILE_SIZE = 1 * 1024 * 1024  # 1 MB
 
 
-def _is_safe_vocab_path(path: Path) -> bool:
-    """Check if vocabulary path is safe to read.
+def _is_safe_vocab_path(path: Path, allowed_base: Path | None = None) -> bool:
+    """Check if vocabulary path is within the allowed directory.
+
+    Uses an allowlist approach: only paths within the project directory
+    (or an explicitly provided base directory) are permitted.
 
     Args:
         path: Path to check.
+        allowed_base: Base directory to allow. Defaults to project root.
 
     Returns:
-        True if path is safe, False otherwise.
+        True if path is within the allowed directory, False otherwise.
     """
     resolved = path.resolve()
-    path_str = str(resolved)
-
-    for forbidden in FORBIDDEN_VOCAB_PREFIXES:
-        if path_str == forbidden or path_str.startswith(forbidden + "/"):
-            return False
-
-    return True
+    if allowed_base is None:
+        allowed_base = Path(__file__).parent.parent  # project root
+    try:
+        resolved.relative_to(allowed_base.resolve())
+        return True
+    except ValueError:
+        return False
 
 
 def parse_vocab_file(path: Path) -> list[str]:
@@ -50,7 +45,15 @@ def parse_vocab_file(path: Path) -> list[str]:
 
     Returns:
         List of vocabulary words.
+
+    Raises:
+        ValueError: If the file exceeds MAX_VOCAB_FILE_SIZE.
     """
+    if path.stat().st_size > MAX_VOCAB_FILE_SIZE:
+        raise ValueError(
+            f"Vocabulary file too large (>{MAX_VOCAB_FILE_SIZE // 1024}KB): {path}"
+        )
+
     words = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -88,10 +91,12 @@ def load_vocabulary(
     # Load extra files (with security validation)
     for filepath in extra_files or []:
         path = Path(filepath)
+        if not _is_safe_vocab_path(path):
+            logger.warning(
+                "Skipped vocabulary path outside project directory: %s", filepath
+            )
+            continue
         if path.exists():
-            if not _is_safe_vocab_path(path):
-                # Silently skip forbidden paths to avoid information disclosure
-                continue
             words.extend(parse_vocab_file(path))
 
     # Deduplicate while preserving order

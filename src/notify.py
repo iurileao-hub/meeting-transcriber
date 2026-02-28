@@ -20,6 +20,12 @@ def _escape_applescript_string(s: str) -> str:
     Returns:
         Escaped string safe for AppleScript.
     """
+    # Remove null bytes and non-printable control characters
+    # (keep \t, \n, \r for escaping below)
+    s = "".join(
+        c for c in s if c in "\t\n\r" or (ord(c) >= 32 and ord(c) != 127)
+    )
+
     # Order matters: escape backslashes first, then other characters
     s = s.replace("\\", "\\\\")  # Backslashes
     s = s.replace('"', '\\"')    # Double quotes

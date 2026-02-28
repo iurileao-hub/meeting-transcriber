@@ -92,6 +92,36 @@ class TestAppleScriptEscaping:
         # Backslash escaped, then quote escaped
         assert '\\\\\\"' in result
 
+    def test_strips_null_bytes(self):
+        """Null bytes should be removed from the string."""
+        result = _escape_applescript_string("hello\x00world")
+        assert "\x00" not in result
+        assert result == "helloworld"
+
+    def test_strips_control_characters(self):
+        """Non-printable control characters should be stripped."""
+        # \x01 (SOH), \x07 (BEL), \x1b (ESC) should all be removed
+        result = _escape_applescript_string("he\x01ll\x07o\x1b!")
+        assert result == "hello!"
+
+    def test_strips_del_character(self):
+        """DEL character (0x7F) should be stripped."""
+        result = _escape_applescript_string("hello\x7fworld")
+        assert result == "helloworld"
+
+    def test_preserves_tabs_newlines_carriage_returns(self):
+        """Tabs, newlines, and carriage returns should be preserved (then escaped)."""
+        result = _escape_applescript_string("a\tb\nc\rd")
+        assert result == "a\\tb\\nc\\rd"
+
+    def test_mixed_control_chars_and_valid_content(self):
+        """Control chars should be stripped while keeping valid content intact."""
+        result = _escape_applescript_string(
+            '\x00\x01Hello\x02 "World"\x03\n\x7f'
+        )
+        # Null and control chars stripped, quotes escaped, newline escaped
+        assert result == 'Hello \\"World\\"\\n'
+
 
 class TestNotifySecurity:
     """Security tests for notify function."""
