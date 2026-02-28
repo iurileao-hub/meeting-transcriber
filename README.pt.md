@@ -2,11 +2,11 @@
 
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Plataforma](https://img.shields.io/badge/Plataforma-macOS%20Apple%20Silicon-lightgrey.svg)](https://support.apple.com/pt-br/HT211814)
-[![Licenca](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)](LICENSE)
+[![Licença](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)](LICENSE)
 [![Testes](https://img.shields.io/badge/testes-289%20passaram-brightgreen.svg)](tests/)
 [![Offline](https://img.shields.io/badge/funciona-100%25%20offline-blueviolet.svg)]()
 
-**Transforme gravacoes de reunioes em transcricoes com identificacao de quem falou — 100% local, sem nuvem.**
+**Transforme gravações de reuniões em transcrições com identificação de quem falou — 100% local, sem nuvem.**
 
 [Read in English](README.md)
 
@@ -14,42 +14,42 @@
 
 ## O Que Ele Faz
 
-O Meeting Transcriber ouve a gravacao de uma reuniao (ou entrevista, aula, mensagem de voz, podcast...) e produz um documento escrito que mostra **quem falou o que, e quando**. Ele identifica as diferentes pessoas automaticamente e marca cada parte da conversa.
+O Meeting Transcriber ouve a gravação de uma reunião (ou entrevista, aula, mensagem de voz, podcast...) e produz um documento escrito que mostra **quem falou o quê, e quando**. Ele identifica as diferentes pessoas automaticamente e marca cada parte da conversa.
 
-Tudo acontece no seu proprio computador. Seus arquivos de audio nunca sao enviados para lugar nenhum.
+Tudo acontece no seu próprio computador. Seus arquivos de áudio nunca são enviados para lugar nenhum.
 
 **Veja como fica o resultado:**
 
 ```
-[00:00] SPEAKER_00: Bom dia a todos, vamos comecar a reuniao.
-[00:05] SPEAKER_01: Obrigado pela presenca. Primeiro item da pauta...
-[00:12] SPEAKER_00: Antes de comecar, alguma atualizacao da semana passada?
+[00:00] SPEAKER_00: Bom dia a todos, vamos começar a reunião.
+[00:05] SPEAKER_01: Obrigado pela presença. Primeiro item da pauta...
+[00:12] SPEAKER_00: Antes de começar, alguma atualização da semana passada?
 [00:18] SPEAKER_02: Sim, o cliente aprovou a proposta ontem.
 ```
 
-Voce recebe tres arquivos de saida: uma versao em texto simples (facil de ler), uma versao formatada em Markdown (fica bonita em documentos), e um arquivo JSON (util se voce quiser processar os dados depois).
+Você recebe três arquivos de saída: uma versão em texto simples (fácil de ler), uma versão formatada em Markdown (fica bonita em documentos), e um arquivo JSON (útil se você quiser processar os dados depois).
 
 ---
 
-## O Que Voce Precisa
+## O Que Você Precisa
 
-Antes de comecar, verifique se voce tem o seguinte:
+Antes de começar, verifique se você tem o seguinte:
 
 | O que | Detalhes |
 |-------|----------|
-| **Um Mac com Apple Silicon** | Ou seja, chip M1, M2, M3 ou M4. Voce pode verificar clicando no menu da Apple e selecionando "Sobre Este Mac". |
-| **Cerca de 10 GB de espaco livre em disco** | Os modelos de IA que fazem a transcricao sao arquivos grandes. Eles sao baixados uma unica vez e ficam armazenados no seu computador. |
-| **Uma conexao com a internet** | So e necessaria na primeira vez, para baixar o programa e seus modelos. Depois disso, tudo funciona offline. |
+| **Um Mac com Apple Silicon** | Ou seja, chip M1, M2, M3 ou M4. Você pode verificar clicando no menu da Apple e selecionando "Sobre Este Mac". |
+| **Cerca de 10 GB de espaço livre em disco** | Os modelos de IA que fazem a transcrição são arquivos grandes. Eles são baixados uma única vez e ficam armazenados no seu computador. |
+| **Uma conexão com a internet** | Só é necessária na primeira vez, para baixar o programa e seus modelos. Depois disso, tudo funciona offline. |
 
 ---
 
-## Instalacao
+## Instalação
 
-Esta secao te guia pela configuracao do Meeting Transcriber passo a passo. Cada passo inclui uma forma de verificar se funcionou. Se algo der errado, consulte a secao [Solucao de Problemas](#solucao-de-problemas).
+Esta seção te guia pela configuração do Meeting Transcriber passo a passo. Cada passo inclui uma forma de verificar se funcionou. Se algo der errado, consulte a seção [Solução de Problemas](#solução-de-problemas).
 
-### Passo 1: Instalar o Homebrew (se voce ainda nao tem)
+### Passo 1: Instalar o Homebrew (se você ainda não tem)
 
-O Homebrew e uma ferramenta que facilita a instalacao de programas no Mac. Abra o aplicativo **Terminal** (voce pode encontra-lo em Aplicativos > Utilitarios, ou buscar por "Terminal" no Spotlight) e cole este comando:
+O Homebrew é uma ferramenta que facilita a instalação de programas no Mac. Abra o aplicativo **Terminal** (você pode encontrá-lo em Aplicativos > Utilitários, ou buscar por "Terminal" no Spotlight) e cole este comando:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -59,11 +59,11 @@ O Homebrew e uma ferramenta que facilita a instalacao de programas no Mac. Abra 
 ```bash
 brew --version
 ```
-Voce deve ver um numero de versao como `Homebrew 4.x.x`.
+Você deve ver um número de versão como `Homebrew 4.x.x`.
 
 ### Passo 2: Instalar o Python 3.12
 
-Python e a linguagem de programacao na qual esta ferramenta foi escrita. Voce precisa especificamente da versao 3.12 (versoes mais novas como 3.14 nao sao compativeis com algumas das bibliotecas que usamos).
+Python é a linguagem de programação na qual esta ferramenta foi escrita. Você precisa especificamente da versão 3.12 (versões mais novas como 3.14 não são compatíveis com algumas das bibliotecas que usamos).
 
 ```bash
 brew install python@3.12
@@ -73,11 +73,11 @@ brew install python@3.12
 ```bash
 python3.12 --version
 ```
-Voce deve ver `Python 3.12.x`.
+Você deve ver `Python 3.12.x`.
 
 ### Passo 3: Instalar o FFmpeg
 
-O FFmpeg e uma ferramenta gratuita que cuida da conversao de arquivos de audio nos bastidores. O Meeting Transcriber usa-o para ler diferentes formatos de audio.
+O FFmpeg é uma ferramenta gratuita que cuida da conversão de arquivos de áudio nos bastidores. O Meeting Transcriber usa-o para ler diferentes formatos de áudio.
 
 ```bash
 brew install ffmpeg
@@ -87,7 +87,7 @@ brew install ffmpeg
 ```bash
 ffmpeg -version
 ```
-Voce deve ver informacoes de versao (a primeira linha ja e suficiente).
+Você deve ver informações de versão (a primeira linha já é suficiente).
 
 ### Passo 4: Baixar o Meeting Transcriber
 
@@ -100,176 +100,176 @@ cd meeting-transcriber
 
 ### Passo 5: Criar um ambiente virtual
 
-Um ambiente virtual e como uma pasta separada onde o programa e todos os seus arquivos vivem, sem afetar o resto do seu computador. Isso mantem tudo organizado e evita conflitos com outros programas.
+Um ambiente virtual é como uma pasta separada onde o programa e todos os seus arquivos vivem, sem afetar o resto do seu computador. Isso mantém tudo organizado e evita conflitos com outros programas.
 
 ```bash
 python3.12 -m venv venv
 source venv/bin/activate
 ```
 
-Apos executar o segundo comando, voce deve ver `(venv)` no inicio da linha do seu terminal. Isso significa que o ambiente virtual esta ativo.
+Após executar o segundo comando, você deve ver `(venv)` no início da linha do seu terminal. Isso significa que o ambiente virtual está ativo.
 
-> **Importante:** Toda vez que voce abrir uma nova janela do Terminal para usar o Meeting Transcriber, voce precisa ativar o ambiente virtual novamente:
+> **Importante:** Toda vez que você abrir uma nova janela do Terminal para usar o Meeting Transcriber, você precisa ativar o ambiente virtual novamente:
 > ```bash
 > cd meeting-transcriber
 > source venv/bin/activate
 > ```
 
-### Passo 6: Instalar as dependencias do programa
+### Passo 6: Instalar as dependências do programa
 
-Dependencias sao as bibliotecas e ferramentas que o Meeting Transcriber precisa para funcionar. Este comando baixa e instala todas elas:
+Dependências são as bibliotecas e ferramentas que o Meeting Transcriber precisa para funcionar. Este comando baixa e instala todas elas:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Isso pode levar alguns minutos. Voce vera muitas linhas rolando na tela — isso e normal.
+Isso pode levar alguns minutos. Você verá muitas linhas rolando na tela — isso é normal.
 
 **Verifique se funcionou:**
 ```bash
 python -c "import whisperx; print('OK')"
 ```
-Voce deve ver `OK`.
+Você deve ver `OK`.
 
-### Passo 7: Configurar o HuggingFace (necessario para identificacao de speakers)
+### Passo 7: Configurar o HuggingFace (necessário para identificação de speakers)
 
-O HuggingFace e um site que hospeda modelos de IA gratuitos. O Meeting Transcriber precisa de acesso a dois desses modelos para distinguir quem esta falando. Isso e completamente gratuito.
+O HuggingFace é um site que hospeda modelos de IA gratuitos. O Meeting Transcriber precisa de acesso a dois desses modelos para distinguir quem está falando. Isso é completamente gratuito.
 
 **7a. Crie uma conta gratuita:**
-- Acesse [huggingface.co/join](https://huggingface.co/join) e faca seu cadastro.
+- Acesse [huggingface.co/join](https://huggingface.co/join) e faça seu cadastro.
 
 **7b. Obtenha seu token de acesso:**
 
-Um token e uma senha especial que permite ao programa baixar modelos de IA do HuggingFace.
+Um token é uma senha especial que permite ao programa baixar modelos de IA do HuggingFace.
 
-- Va em [Settings > Access Tokens](https://huggingface.co/settings/tokens)
-- Clique em "New token", de qualquer nome (como "meeting-transcriber"), e clique em Create.
-- Copie o token (ele comeca com `hf_`).
+- Vá em [Settings > Access Tokens](https://huggingface.co/settings/tokens)
+- Clique em "New token", dê qualquer nome (como "meeting-transcriber"), e clique em Create.
+- Copie o token (ele começa com `hf_`).
 
 **7c. Salve o token:**
 ```bash
 cp .env.example .env
 ```
 
-Agora abra o arquivo `.env` em qualquer editor de texto e substitua `hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx` pelo token que voce acabou de copiar. Salve o arquivo.
+Agora abra o arquivo `.env` em qualquer editor de texto e substitua `hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx` pelo token que você acabou de copiar. Salve o arquivo.
 
-**7d. Aceite os termos dos modelos de IA (so precisa fazer uma vez):**
+**7d. Aceite os termos dos modelos de IA (só precisa fazer uma vez):**
 
-Voce precisa visitar duas paginas e clicar em "Agree and access repository" em cada uma:
+Você precisa visitar duas páginas e clicar em "Agree and access repository" em cada uma:
 
 1. [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1) -- clique em "Agree and access repository"
 2. [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0) -- clique em "Agree and access repository"
 
-Pronto! Voce so precisa fazer isso uma vez.
+Pronto! Você só precisa fazer isso uma vez.
 
 ---
 
-## Sua Primeira Transcricao
+## Sua Primeira Transcrição
 
-Vamos garantir que tudo esta funcionando. Coloque um arquivo de audio (qualquer `.mp3`, `.wav`, `.m4a` ou outro [formato suportado](#formatos-de-audio-suportados)) dentro da pasta `data/audio/` e execute:
+Vamos garantir que tudo está funcionando. Coloque um arquivo de áudio (qualquer `.mp3`, `.wav`, `.m4a` ou outro [formato suportado](#formatos-de-áudio-suportados)) dentro da pasta `data/audio/` e execute:
 
 ```bash
 python src/transcribe.py data/audio/seu-arquivo.mp3
 ```
 
-O programa vai mostrar uma barra de progresso enquanto trabalha em varias etapas: carregando o modelo de IA, detectando fala, transcrevendo e identificando speakers. Dependendo da duracao do seu audio e do tamanho do modelo, isso pode levar de alguns segundos a varios minutos.
+O programa vai mostrar uma barra de progresso enquanto trabalha em várias etapas: carregando o modelo de IA, detectando fala, transcrevendo e identificando speakers. Dependendo da duração do seu áudio e do tamanho do modelo, isso pode levar de alguns segundos a vários minutos.
 
-Quando terminar, voce vai encontrar suas transcricoes na pasta `data/transcripts/`:
-- `seu-arquivo.txt` -- Texto simples, facil de ler
-- `seu-arquivo.md` -- Versao formatada, boa para compartilhar
+Quando terminar, você vai encontrar suas transcrições na pasta `data/transcripts/`:
+- `seu-arquivo.txt` -- Texto simples, fácil de ler
+- `seu-arquivo.md` -- Versão formatada, boa para compartilhar
 - `seu-arquivo.json` -- Dados estruturados
 
-Abra o arquivo `.txt` para ver sua transcricao com identificacao de speakers e marcacoes de tempo.
+Abra o arquivo `.txt` para ver sua transcrição com identificação de speakers e marcações de tempo.
 
-### Formatos de Audio Suportados
+### Formatos de Áudio Suportados
 
-O Meeting Transcriber funciona com estes tipos de arquivo de audio:
+O Meeting Transcriber funciona com estes tipos de arquivo de áudio:
 
 `.wav` `.mp3` `.m4a` `.flac` `.ogg` `.webm` `.aac` `.opus`
 
-O formato `.m4a` e o que iPhones e Macs usam para gravacoes de voz. O formato `.opus` e o que o WhatsApp usa para mensagens de voz.
+O formato `.m4a` é o que iPhones e Macs usam para gravações de voz. O formato `.opus` é o que o WhatsApp usa para mensagens de voz.
 
 ---
 
-## Modos de Transcricao
+## Modos de Transcrição
 
-O Meeting Transcriber tem tres modos. Pense neles como abordagens diferentes para o mesmo trabalho:
+O Meeting Transcriber tem três modos. Pense neles como abordagens diferentes para o mesmo trabalho:
 
 ### Qual modo devo usar?
 
-- **"Estou transcrevendo uma reuniao e preciso saber quem falou o que"** -- Use o modo **meeting** (este e o padrao, voce nao precisa adicionar nada):
+- **"Estou transcrevendo uma reunião e preciso saber quem falou o quê"** -- Use o modo **meeting** (este é o padrão, você não precisa adicionar nada):
   ```bash
   python src/transcribe.py reuniao.mp3
   ```
 
-- **"So preciso do texto rapidamente, nao me importo com quem falou"** -- Use o modo **fast**:
+- **"Só preciso do texto rapidamente, não me importo com quem falou"** -- Use o modo **fast**:
   ```bash
   python src/transcribe.py reuniao.mp3 --mode fast
   ```
 
-- **"Preciso do texto rapidamente, mas tambem quero saber quem falou"** -- Use o modo **fast** com a flag `--diarize`:
+- **"Preciso do texto rapidamente, mas também quero saber quem falou"** -- Use o modo **fast** com a flag `--diarize`:
   ```bash
   python src/transcribe.py reuniao.mp3 --mode fast --diarize
   ```
 
-- **"Precisao e a prioridade, e eu nao me importo de esperar mais"** -- Use o modo **precise**:
+- **"Precisão é a prioridade, e eu não me importo de esperar mais"** -- Use o modo **precise**:
   ```bash
   python src/transcribe.py reuniao.mp3 --mode precise
   ```
 
-### Comparacao entre os modos
+### Comparação entre os modos
 
-| | Meeting (padrao) | Fast | Precise |
+| | Meeting (padrão) | Fast | Precise |
 |---|---|---|---|
-| **Velocidade** | Moderada | Muito rapido (10-15x tempo real) | Mais lento |
+| **Velocidade** | Moderada | Muito rápido (10-15x tempo real) | Mais lento |
 | **Identifica speakers?** | Sim, sempre | Somente com `--diarize` | Sim, sempre |
-| **Precisao** | Muito boa | Boa | A melhor |
-| **Memoria necessaria** | ~10 GB | ~4 GB | ~16 GB |
-| **Melhor para** | A maioria das reunioes | Rascunhos rapidos, audio com um unico speaker | Gravacoes importantes, juridico/medico |
+| **Precisão** | Muito boa | Boa | A melhor |
+| **Memória necessária** | ~10 GB | ~4 GB | ~16 GB |
+| **Melhor para** | A maioria das reuniões | Rascunhos rápidos, áudio com um único speaker | Gravações importantes, jurídico/médico |
 
-> **Nota sobre o modo precise:** Ele usa um modelo de IA grande (IBM Granite) que precisa de cerca de 16 GB de RAM. Se o seu Mac tem 8 GB de memoria, fique com o modo **meeting**.
+> **Nota sobre o modo precise:** Ele usa um modelo de IA grande (IBM Granite) que precisa de cerca de 16 GB de RAM. Se o seu Mac tem 8 GB de memória, fique com o modo **meeting**.
 
 ---
 
-## Opcoes Uteis
+## Opções Úteis
 
-Aqui estao as opcoes que voce vai usar com mais frequencia:
+Aqui estão as opções que você vai usar com mais frequência:
 
-### Informe o idioma (melhora a precisao)
+### Informe o idioma (melhora a precisão)
 
 ```bash
 python src/transcribe.py reuniao.mp3 --language pt
 ```
 
-Codigos de idioma mais comuns: `en` (ingles), `pt` (portugues), `es` (espanhol), `fr` (frances), `de` (alemao).
+Códigos de idioma mais comuns: `en` (inglês), `pt` (português), `es` (espanhol), `fr` (francês), `de` (alemão).
 
-### Informe quantas pessoas estao na gravacao
+### Informe quantas pessoas estão na gravação
 
-Se voce sabe que havia exatamente 3 pessoas na reuniao, informar ao programa ajuda a identifica-las com mais precisao:
+Se você sabe que havia exatamente 3 pessoas na reunião, informar ao programa ajuda a identificá-las com mais precisão:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --num-speakers 3
 ```
 
-### Receba uma notificacao quando terminar
+### Receba uma notificação quando terminar
 
-Para gravacoes longas, voce pode pedir ao Mac para te avisar quando a transcricao estiver pronta:
+Para gravações longas, você pode pedir ao Mac para te avisar quando a transcrição estiver pronta:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --notify
 ```
 
-### Escolha quais arquivos de saida voce quer
+### Escolha quais arquivos de saída você quer
 
-Por padrao, voce recebe todos os tres formatos (txt, md, json). Se quiser apenas o texto simples:
+Por padrão, você recebe todos os três formatos (txt, md, json). Se quiser apenas o texto simples:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --format txt
 ```
 
-### Veja informacoes detalhadas do progresso
+### Veja informações detalhadas do progresso
 
-Se algo parecer errado, o modo verbose mostra tudo o que o programa esta fazendo:
+Se algo parecer errado, o modo verbose mostra tudo o que o programa está fazendo:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --verbose
@@ -277,39 +277,39 @@ python src/transcribe.py reuniao.mp3 --verbose
 
 ---
 
-## Formatos de Saida
+## Formatos de Saída
 
-O Meeting Transcriber produz ate tres arquivos a partir de cada gravacao de audio:
+O Meeting Transcriber produz até três arquivos a partir de cada gravação de áudio:
 
 ### Texto Simples (.txt)
 
-O formato mais simples. Facil de ler, facil de pesquisar, funciona em qualquer lugar.
+O formato mais simples. Fácil de ler, fácil de pesquisar, funciona em qualquer lugar.
 
 ```
-[00:00] SPEAKER_00: Bom dia a todos, vamos comecar a reuniao.
-[00:05] SPEAKER_01: Obrigado pela presenca. Primeiro item da pauta e
+[00:00] SPEAKER_00: Bom dia a todos, vamos começar a reunião.
+[00:05] SPEAKER_01: Obrigado pela presença. Primeiro item da pauta é
         a proposta do cliente.
-[00:12] SPEAKER_00: Antes de comecar, alguma atualizacao da semana passada?
+[00:12] SPEAKER_00: Antes de começar, alguma atualização da semana passada?
 ```
 
 ### Markdown (.md)
 
-Uma versao formatada que fica bonita quando aberta em apps como Notion, Obsidian ou GitHub. Otima para compartilhar.
+Uma versão formatada que fica bonita quando aberta em apps como Notion, Obsidian ou GitHub. Ótima para compartilhar.
 
 ```markdown
-## Transcricao da Reuniao
+## Transcrição da Reunião
 
-**[00:00] Speaker 1:** Bom dia a todos, vamos comecar a reuniao.
+**[00:00] Speaker 1:** Bom dia a todos, vamos começar a reunião.
 
-**[00:05] Speaker 2:** Obrigado pela presenca. Primeiro item da pauta e
+**[00:05] Speaker 2:** Obrigado pela presença. Primeiro item da pauta é
 a proposta do cliente.
 
-**[00:12] Speaker 1:** Antes de comecar, alguma atualizacao da semana passada?
+**[00:12] Speaker 1:** Antes de começar, alguma atualização da semana passada?
 ```
 
 ### JSON (.json)
 
-Um formato estruturado que contem todos os detalhes, incluindo horarios exatos de inicio e fim de cada segmento. Util se voce quiser processar os dados com outras ferramentas ou scripts.
+Um formato estruturado que contém todos os detalhes, incluindo horários exatos de início e fim de cada segmento. Útil se você quiser processar os dados com outras ferramentas ou scripts.
 
 ```json
 {
@@ -317,7 +317,7 @@ Um formato estruturado que contem todos os detalhes, incluindo horarios exatos d
     {
       "start": 0.0,
       "end": 4.2,
-      "text": "Bom dia a todos, vamos comecar a reuniao.",
+      "text": "Bom dia a todos, vamos começar a reunião.",
       "speaker": "SPEAKER_00"
     }
   ],
@@ -330,14 +330,14 @@ Um formato estruturado que contem todos os detalhes, incluindo horarios exatos d
 
 ---
 
-## Vocabulario Customizado
+## Vocabulário Customizado
 
-Se suas reunioes usam termos especializados (terminologia medica, jargao juridico, nomes de empresas, siglas), voce pode ensinar o transcritor a reconhece-los. Isso e especialmente util para palavras que a IA pode nao conhecer ou entender errado.
+Se suas reuniões usam termos especializados (terminologia médica, jargão jurídico, nomes de empresas, siglas), você pode ensinar o transcritor a reconhecê-los. Isso é especialmente útil para palavras que a IA pode não conhecer ou entender errado.
 
 **Como configurar:**
 
 1. Abra o arquivo `vocab/default.txt` (ou crie um baseado no `vocab/default.txt.example`).
-2. Adicione seus termos, um por linha. Linhas que comecam com `#` sao ignoradas.
+2. Adicione seus termos, um por linha. Linhas que começam com `#` são ignoradas.
 
 ```
 # Pessoas
@@ -348,15 +348,15 @@ Prof. Santos
 Acme Corporation
 NovaTech
 
-# Siglas e termos tecnicos
+# Siglas e termos técnicos
 SUS
 laparoscopia
-amortizacao
+amortização
 ```
 
 3. Pronto! O programa carrega automaticamente o `vocab/default.txt` toda vez que roda.
 
-Se voce tem arquivos de vocabulario diferentes para projetos diferentes, pode especificar qual usar:
+Se você tem arquivos de vocabulário diferentes para projetos diferentes, pode especificar qual usar:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --vocab vocab/termos-juridicos.txt
@@ -364,47 +364,47 @@ python src/transcribe.py reuniao.mp3 --vocab vocab/termos-juridicos.txt
 
 ---
 
-## Usando IA para Gerar Atas de Reuniao
+## Usando IA para Gerar Atas de Reunião
 
-Uma vez que voce tem uma transcricao, pode usar um assistente de IA (como o Claude) para transforma-la em um documento polido. O Meeting Transcriber inclui templates prontos para os cenarios mais comuns:
+Uma vez que você tem uma transcrição, pode usar um assistente de IA (como o Claude) para transformá-la em um documento polido. O Meeting Transcriber inclui templates prontos para os cenários mais comuns:
 
-### Templates Disponiveis
+### Templates Disponíveis
 
 | Template | O que ele produz | Quando usar |
 |----------|-----------------|-------------|
-| [Ata de Reuniao](examples/pt/ata_reuniao.md) | Ata formal com pauta, decisoes e itens de acao | Apos qualquer reuniao de equipe |
-| [Resumo Executivo](examples/pt/resumo_executivo.md) | Resumo de alto nivel com plano de acao estruturado (metodologia 5W2H) | Para relatorios a lideranca |
-| [Itens de Acao](examples/pt/itens_acao.md) | Uma tabela rapida de quem precisa fazer o que, ate quando | Quando voce so precisa da lista de tarefas |
+| [Ata de Reunião](examples/pt/ata_reuniao.md) | Ata formal com pauta, decisões e itens de ação | Após qualquer reunião de equipe |
+| [Resumo Executivo](examples/pt/resumo_executivo.md) | Resumo de alto nível com plano de ação estruturado (metodologia 5W2H) | Para relatórios à liderança |
+| [Itens de Ação](examples/pt/itens_acao.md) | Uma tabela rápida de quem precisa fazer o quê, até quando | Quando você só precisa da lista de tarefas |
 
 ### Como usar
 
-1. **Transcreva sua reuniao:**
+1. **Transcreva sua reunião:**
    ```bash
    python src/transcribe.py data/audio/reuniao-equipe.mp3
    ```
 
-2. **Abra o Claude Code** (ou qualquer assistente de IA) e faca um pedido como:
+2. **Abra o Claude Code** (ou qualquer assistente de IA) e faça um pedido como:
 
    ```
-   Leia data/transcripts/reuniao-equipe.txt e gere uma ata formal de reuniao
+   Leia data/transcripts/reuniao-equipe.txt e gere uma ata formal de reunião
    seguindo o template em examples/pt/ata_reuniao.md
    ```
 
-3. A IA vai ler sua transcricao e produzir um documento polido e organizado.
+3. A IA vai ler sua transcrição e produzir um documento polido e organizado.
 
 ### Dicas
 
-- Para melhores resultados, especifique o idioma e o numero de speakers ao transcrever.
-- Voce pode customizar os templates para combinar com o formato da sua organizacao -- basta editar os arquivos em `examples/pt/`.
-- Se voce criar seus proprios templates, salve-os na pasta `prompts/` (esta pasta nao e compartilhada quando voce atualiza o programa).
+- Para melhores resultados, especifique o idioma e o número de speakers ao transcrever.
+- Você pode customizar os templates para combinar com o formato da sua organização -- basta editar os arquivos em `examples/pt/`.
+- Se você criar seus próprios templates, salve-os na pasta `prompts/` (esta pasta não é compartilhada quando você atualiza o programa).
 
 ---
 
-## Solucao de Problemas
+## Solução de Problemas
 
-### "No module named 'whisperx'" (ou erros parecidos de modulo nao encontrado)
+### "No module named 'whisperx'" (ou erros parecidos de módulo não encontrado)
 
-Nao se preocupe, isso e facil de resolver. Normalmente significa que o ambiente virtual nao esta ativo. Execute estes comandos:
+Não se preocupe, isso é fácil de resolver. Normalmente significa que o ambiente virtual não está ativo. Execute estes comandos:
 
 ```bash
 cd meeting-transcriber
@@ -412,27 +412,27 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-O principal a lembrar: toda vez que voce abre uma nova janela do Terminal, precisa executar `source venv/bin/activate` antes de usar o programa.
+O principal a lembrar: toda vez que você abre uma nova janela do Terminal, precisa executar `source venv/bin/activate` antes de usar o programa.
 
-### O programa fica sem memoria
+### O programa fica sem memória
 
-Isso significa que o modelo de IA e grande demais para a RAM disponivel. Tente usar um modelo menor:
+Isso significa que o modelo de IA é grande demais para a RAM disponível. Tente usar um modelo menor:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --model small
 ```
 
-O modelo `small` usa cerca de 2 GB de RAM e ainda produz bons resultados. Voce tambem pode fechar outros aplicativos para liberar memoria.
+O modelo `small` usa cerca de 2 GB de RAM e ainda produz bons resultados. Você também pode fechar outros aplicativos para liberar memória.
 
-### Speakers nao sao identificados corretamente
+### Speakers não são identificados corretamente
 
-A IA faz o melhor para distinguir os speakers, mas nao e perfeita. Voce pode ajuda-la informando quantos speakers havia na gravacao:
+A IA faz o melhor para distinguir os speakers, mas não é perfeita. Você pode ajudá-la informando quantos speakers havia na gravação:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --num-speakers 3
 ```
 
-Se voce sabe que havia entre 2 e 5 speakers mas nao tem certeza do numero exato:
+Se você sabe que havia entre 2 e 5 speakers mas não tem certeza do número exato:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --min-speakers 2 --max-speakers 5
@@ -440,34 +440,34 @@ python src/transcribe.py reuniao.mp3 --min-speakers 2 --max-speakers 5
 
 ### O idioma detectado estava errado
 
-Se a transcricao sair no idioma errado, informe ao programa qual idioma esperar:
+Se a transcrição sair no idioma errado, informe ao programa qual idioma esperar:
 
 ```bash
 python src/transcribe.py reuniao.mp3 --language pt
 ```
 
-### A transcricao esta demorando muito
+### A transcrição está demorando muito
 
-Algumas coisas que voce pode tentar:
+Algumas coisas que você pode tentar:
 
-- Use `--mode fast` se voce nao precisa de identificacao de speakers.
-- Use `--model small` para um modelo de IA menor e mais rapido.
-- Feche outros aplicativos para liberar memoria e poder de processamento.
-- Para gravacoes muito longas (2+ horas), considere dividir o audio em partes menores antes.
+- Use `--mode fast` se você não precisa de identificação de speakers.
+- Use `--model small` para um modelo de IA menor e mais rápido.
+- Feche outros aplicativos para liberar memória e poder de processamento.
+- Para gravações muito longas (2+ horas), considere dividir o áudio em partes menores antes.
 
-### Erro de autenticacao do HuggingFace
+### Erro de autenticação do HuggingFace
 
-Isso significa que o programa nao consegue acessar os modelos de identificacao de speakers. Verifique o seguinte:
+Isso significa que o programa não consegue acessar os modelos de identificação de speakers. Verifique o seguinte:
 
-1. Abra o arquivo `.env` e certifique-se de que seu token esta la (deve comecar com `hf_`).
-2. Certifique-se de que voce visitou **ambas** as paginas abaixo e clicou em "Agree and access repository":
+1. Abra o arquivo `.env` e certifique-se de que seu token está lá (deve começar com `hf_`).
+2. Certifique-se de que você visitou **ambas** as páginas abaixo e clicou em "Agree and access repository":
    - [pyannote/speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
    - [pyannote/segmentation-3.0](https://huggingface.co/pyannote/segmentation-3.0)
-3. Verifique se seu token ainda e valido em [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
+3. Verifique se seu token ainda é válido em [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
 
 ### "command not found: python" ou "command not found: pip"
 
-Certifique-se de que voce ativou o ambiente virtual primeiro:
+Certifique-se de que você ativou o ambiente virtual primeiro:
 
 ```bash
 cd meeting-transcriber
@@ -478,53 +478,53 @@ Se o erro persistir, tente usar `python3.12` em vez de `python`.
 
 ---
 
-## Privacidade e Seguranca
+## Privacidade e Segurança
 
-**Suas gravacoes e transcricoes nunca saem do seu computador.**
+**Suas gravações e transcrições nunca saem do seu computador.**
 
-- Todo o processamento acontece localmente no seu Mac. Nenhum audio e enviado para qualquer servidor.
-- Apos a configuracao inicial, nenhuma conexao com a internet e necessaria.
-- Os modelos de IA sao baixados uma vez e armazenados no seu computador.
-- Nao ha telemetria, analytics ou coleta de dados de nenhum tipo.
+- Todo o processamento acontece localmente no seu Mac. Nenhum áudio é enviado para qualquer servidor.
+- Após a configuração inicial, nenhuma conexão com a internet é necessária.
+- Os modelos de IA são baixados uma vez e armazenados no seu computador.
+- Não há telemetria, analytics ou coleta de dados de nenhum tipo.
 
 Isso torna o Meeting Transcriber ideal para:
-- **Reunioes empresariais confidenciais** -- discussoes de diretoria, sessoes de estrategia
-- **Consultas medicas** -- entrevistas com pacientes, anotacoes clinicas
-- **Processos juridicos** -- depoimentos, reunioes com clientes
-- **Gravacoes pessoais** -- entrevistas, aulas, notas de voz
+- **Reuniões empresariais confidenciais** -- discussões de diretoria, sessões de estratégia
+- **Consultas médicas** -- entrevistas com pacientes, anotações clínicas
+- **Processos jurídicos** -- depoimentos, reuniões com clientes
+- **Gravações pessoais** -- entrevistas, aulas, notas de voz
 
 ---
 
 <details>
-<summary><strong>Selecao de Modelo (avancado)</strong></summary>
+<summary><strong>Seleção de Modelo (avançado)</strong></summary>
 
-Um modelo e o cerebro de IA que converte fala em texto. Modelos maiores sao mais precisos, mas mais lentos e usam mais memoria. O padrao (`large-v3`) e a melhor escolha para a maioria das pessoas.
+Um modelo é o cérebro de IA que converte fala em texto. Modelos maiores são mais precisos, mas mais lentos e usam mais memória. O padrão (`large-v3`) é a melhor escolha para a maioria das pessoas.
 
-| Modelo | Precisao | Velocidade | RAM Necessaria | Quando usar |
+| Modelo | Precisão | Velocidade | RAM Necessária | Quando usar |
 |--------|----------|------------|----------------|-------------|
-| tiny | Baixa | Muito rapido | ~1 GB | Apenas para testar se o programa funciona |
-| base | Media | Rapido | ~1 GB | Rascunhos rapidos |
-| small | Boa | Moderado | ~2 GB | Uso diario quando velocidade importa |
-| medium | Muito boa | Lento | ~5 GB | Reunioes importantes onde precisao importa |
-| **large-v3** | Excelente | Mais lento | ~10 GB | Melhor qualidade (este e o padrao) |
+| tiny | Baixa | Muito rápido | ~1 GB | Apenas para testar se o programa funciona |
+| base | Média | Rápido | ~1 GB | Rascunhos rápidos |
+| small | Boa | Moderado | ~2 GB | Uso diário quando velocidade importa |
+| medium | Muito boa | Lento | ~5 GB | Reuniões importantes onde precisão importa |
+| **large-v3** | Excelente | Mais lento | ~10 GB | Melhor qualidade (este é o padrão) |
 
 ```bash
-# Usar um modelo menor se voce precisa de velocidade ou tem pouca memoria
+# Usar um modelo menor se você precisa de velocidade ou tem pouca memória
 python src/transcribe.py reuniao.mp3 --model small
 
-# Usar explicitamente o maior modelo para gravacoes importantes
+# Usar explicitamente o maior modelo para gravações importantes
 python src/transcribe.py reuniao.mp3 --model large-v3
 ```
 
 ### Modelos adicionais para o modo fast
 
-Ao usar `--mode fast`, voce tem acesso a alguns modelos extras otimizados para Apple Silicon:
+Ao usar `--mode fast`, você tem acesso a alguns modelos extras otimizados para Apple Silicon:
 
-| Modelo | Descricao |
+| Modelo | Descrição |
 |--------|-----------|
-| large-v3-turbo | Melhor equilibrio entre velocidade e qualidade |
-| distil-large-v3 | Mais rapido, levemente menos preciso |
-| large-v3-8bit | Usa menos memoria |
+| large-v3-turbo | Melhor equilíbrio entre velocidade e qualidade |
+| distil-large-v3 | Mais rápido, levemente menos preciso |
+| large-v3-8bit | Usa menos memória |
 
 ```bash
 python src/transcribe.py reuniao.mp3 --mode fast --model large-v3-turbo
@@ -533,38 +533,38 @@ python src/transcribe.py reuniao.mp3 --mode fast --model large-v3-turbo
 </details>
 
 <details>
-<summary><strong>Referencia Completa de Opcoes</strong></summary>
+<summary><strong>Referência Completa de Opções</strong></summary>
 
-| Opcao | Forma curta | O que faz | Padrao |
+| Opção | Forma curta | O que faz | Padrão |
 |-------|-------------|-----------|--------|
-| `--model` | `-m` | Escolhe o tamanho do modelo de IA (ver Selecao de Modelo acima) | large-v3 |
-| `--language` | `-l` | Define o idioma do audio (en, pt, es, fr, de, etc.) | auto-detectar |
-| `--num-speakers` | `-n` | Informa o numero exato de speakers | auto-detectar |
-| `--min-speakers` | | Numero minimo de speakers esperado | -- |
-| `--max-speakers` | | Numero maximo de speakers esperado | -- |
-| `--output` | `-o` | Pasta onde as transcricoes sao salvas | data/transcripts |
-| `--format` | `-f` | Formato de saida: json, txt, md ou all | all |
-| `--mode` | | Abordagem de transcricao: fast, meeting ou precise | meeting |
+| `--model` | `-m` | Escolhe o tamanho do modelo de IA (ver Seleção de Modelo acima) | large-v3 |
+| `--language` | `-l` | Define o idioma do áudio (en, pt, es, fr, de, etc.) | auto-detectar |
+| `--num-speakers` | `-n` | Informa o número exato de speakers | auto-detectar |
+| `--min-speakers` | | Número mínimo de speakers esperado | -- |
+| `--max-speakers` | | Número máximo de speakers esperado | -- |
+| `--output` | `-o` | Pasta onde as transcrições são salvas | data/transcripts |
+| `--format` | `-f` | Formato de saída: json, txt, md ou all | all |
+| `--mode` | | Abordagem de transcrição: fast, meeting ou precise | meeting |
 | `--device` | `-d` | Processador a usar: cpu, cuda ou mps | auto |
-| `--notify` | | Mostra uma notificacao do macOS ao terminar | desligado |
-| `--vocab` | | Caminho para um arquivo de vocabulario customizado | -- |
+| `--notify` | | Mostra uma notificação do macOS ao terminar | desligado |
+| `--vocab` | | Caminho para um arquivo de vocabulário customizado | -- |
 | `--ui-lang` | | Idioma da interface: en ou pt | auto |
 | `--diarize` | | Identificar speakers no modo fast | desligado |
-| `--verbose` | `-v` | Mostra logs detalhados (util para debug) | desligado |
+| `--verbose` | `-v` | Mostra logs detalhados (útil para debug) | desligado |
 
 </details>
 
 <details>
-<summary><strong>Instalando backends de transcricao adicionais</strong></summary>
+<summary><strong>Instalando backends de transcrição adicionais</strong></summary>
 
-A instalacao padrao inclui o backend do modo **meeting**. Se voce quiser usar os outros modos:
+A instalação padrão inclui o backend do modo **meeting**. Se você quiser usar os outros modos:
 
 **Modo fast** (usa MLX-Whisper, otimizado para Apple Silicon):
 ```bash
 pip install mlx-whisper
 ```
 
-**Modo precise** (usa IBM Granite, maior precisao):
+**Modo precise** (usa IBM Granite, maior precisão):
 ```bash
 pip install transformers accelerate
 ```
@@ -574,7 +574,7 @@ pip install transformers accelerate
 pip install mlx-whisper transformers accelerate
 ```
 
-> **Nota:** O modo precise requer cerca de 16 GB de RAM. Se o seu Mac tem 8 GB de memoria, os modos meeting e fast vao te atender muito bem.
+> **Nota:** O modo precise requer cerca de 16 GB de RAM. Se o seu Mac tem 8 GB de memória, os modos meeting e fast vão te atender muito bem.
 
 </details>
 
@@ -582,24 +582,24 @@ pip install mlx-whisper transformers accelerate
 
 ## Agradecimentos
 
-Construido com estes excelentes projetos open-source:
+Construído com estes excelentes projetos open-source:
 
 - [WhisperX](https://github.com/m-bain/whisperX) -- Reconhecimento de fala com timestamps por palavra
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) -- Inferencia Whisper otimizada
-- [pyannote.audio](https://github.com/pyannote/pyannote-audio) -- Diarizacao de speakers
+- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) -- Inferência Whisper otimizada
+- [pyannote.audio](https://github.com/pyannote/pyannote-audio) -- Diarização de speakers
 - [MLX](https://github.com/ml-explore/mlx) -- Framework de machine learning para Apple Silicon
-- [IBM Granite Speech](https://huggingface.co/ibm-granite) -- Reconhecimento de fala de alta precisao
+- [IBM Granite Speech](https://huggingface.co/ibm-granite) -- Reconhecimento de fala de alta precisão
 
 ---
 
-## Licenca
+## Licença
 
-Licenca MIT -- livre para uso pessoal e comercial.
+Licença MIT -- livre para uso pessoal e comercial.
 
 ---
 
 ## Autor
 
-**Iuri Almeida**
+**Iúri Almeida**
 
 *Fevereiro de 2026*

@@ -1,51 +1,51 @@
-# Modelo de Itens de Acao
+# Modelo de Itens de Ação
 
-Extracao rapida de itens de acao de uma transcricao.
+Extração rápida de itens de ação de uma transcrição.
 
 ## Prompt
 
 ```
-Leia o arquivo data/transcripts/[NOME_ARQUIVO].txt e extraia todos os ITENS DE ACAO.
+Leia o arquivo data/transcripts/[NOME_ARQUIVO].txt e extraia todos os ITENS DE AÇÃO.
 
 Formate como tabela:
 
-| # | Acao | Responsavel | Prazo | Prioridade | Status |
+| # | Ação | Responsável | Prazo | Prioridade | Status |
 |---|------|-------------|-------|------------|--------|
 
-Instrucoes:
-- Liste TODAS as tarefas, compromissos ou acoes mencionadas
+Instruções:
+- Liste TODAS as tarefas, compromissos ou ações mencionadas
 - Inclua compromissos informais ("eu cuido disso")
-- Use SPEAKER_XX se nomes nao forem identificados
+- Use SPEAKER_XX se nomes não forem identificados
 - Marque todos como "Pendente"
-- Infira prioridade do contexto (urgencia, enfase)
-- Use "A definir" para prazos nao definidos
+- Infira prioridade do contexto (urgência, ênfase)
+- Use "A definir" para prazos não definidos
 ```
 
-## Variacoes
+## Variações
 
-### Relatorio de Acompanhamento
+### Relatório de Acompanhamento
 
 ```
-Leia a transcricao e gere um RELATORIO DE ACOMPANHAMENTO:
+Leia a transcrição e gere um RELATÓRIO DE ACOMPANHAMENTO:
 
-1. Acoes concluidas (mencionadas como finalizadas)
-2. Acoes em andamento (com % de progresso se mencionado)
-3. Acoes pendentes/atrasadas
-4. Novos itens surgidos nesta reuniao
+1. Ações concluídas (mencionadas como finalizadas)
+2. Ações em andamento (com % de progresso se mencionado)
+3. Ações pendentes/atrasadas
+4. Novos itens surgidos nesta reunião
 5. Bloqueios/impedimentos identificados
 ```
 
-### Apenas Decisoes
+### Apenas Decisões
 
 ```
-Leia a transcricao e extraia apenas as DECISOES tomadas:
+Leia a transcrição e extraia apenas as DECISÕES tomadas:
 
-| # | Decisao | Contexto | Impacto |
+| # | Decisão | Contexto | Impacto |
 |---|---------|----------|---------|
 ```
 
 ## Dicas
 
-- **Reunioes longas**: Peca para dividir a saida por topico
-- **Multiplos responsaveis**: Liste todos, separados por virgula
-- **Acoes implicitas**: Inclua compromissos mesmo que nao formalizados
+- **Reuniões longas**: Peça para dividir a saída por tópico
+- **Múltiplos responsáveis**: Liste todos, separados por vírgula
+- **Ações implícitas**: Inclua compromissos mesmo que não formalizados

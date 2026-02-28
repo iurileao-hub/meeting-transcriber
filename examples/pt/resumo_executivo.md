@@ -1,44 +1,44 @@
 # Modelo de Resumo Executivo
 
-Gera resumo executivo com plano de acao a partir de uma transcricao.
+Gera resumo executivo com plano de ação a partir de uma transcrição.
 
 ## Prompt
 
 ```
-Leia o arquivo data/transcripts/[NOME_ARQUIVO].txt e gere um RESUMO EXECUTIVO com PLANO DE ACAO.
+Leia o arquivo data/transcripts/[NOME_ARQUIVO].txt e gere um RESUMO EXECUTIVO com PLANO DE AÇÃO.
 
 ## Resumo Executivo
 
 Inclua:
-- Contexto (1-2 paragrafos: proposito da reuniao, relevancia dos temas)
-- Principais decisoes (lista objetiva, uma frase cada)
-- Pontos de atencao (riscos, preocupacoes, pendencias)
+- Contexto (1-2 parágrafos: propósito da reunião, relevância dos temas)
+- Principais decisões (lista objetiva, uma frase cada)
+- Pontos de atenção (riscos, preocupações, pendências)
 
-## Plano de Acao (5W2H)
+## Plano de Ação (5W2H)
 
-Para cada acao, preencha uma tabela:
-- O QUE (What): Tarefa especifica
+Para cada ação, preencha uma tabela:
+- O QUE (What): Tarefa específica
 - POR QUE (Why): Justificativa
-- QUEM (Who): Responsavel (SPEAKER_XX se desconhecido)
+- QUEM (Who): Responsável (SPEAKER_XX se desconhecido)
 - ONDE (Where): Departamento/sistema
 - QUANDO (When): Prazo ou "A definir"
 - COMO (How): Abordagem (se discutida)
-- QUANTO (How much): Recursos necessarios ou "N/A"
+- QUANTO (How much): Recursos necessários ou "N/A"
 
-Depois forneca:
-- Tabela resumo: #, Acao, Responsavel, Prazo, Prioridade
-- Checklist de validacao SMART para metas principais
-- Proximos passos com prazos
+Depois forneça:
+- Tabela resumo: #, Ação, Responsável, Prazo, Prioridade
+- Checklist de validação SMART para metas principais
+- Próximos passos com prazos
 
-Instrucoes:
-- Infira prioridades pelo tom e enfase
-- Seja especifico — evite acoes vagas como "melhorar processo"
-- Identifique dependencias entre acoes
-- Use "A definir" para prazos indefinidos e destaque como pendencia
+Instruções:
+- Infira prioridades pelo tom e ênfase
+- Seja específico — evite ações vagas como "melhorar processo"
+- Identifique dependências entre ações
+- Use "A definir" para prazos indefinidos e destaque como pendência
 ```
 
 ## Metodologias
 
-**5W2H** — Estrutura cada acao com 7 perguntas para clareza e completude.
+**5W2H** — Estrutura cada ação com 7 perguntas para clareza e completude.
 
-**SMART** — Valida se metas sao Especificas, Mensuraveis, Alcancaveis, Realistas e Temporais.
+**SMART** — Valida se metas são Específicas, Mensuráveis, Alcançáveis, Realistas e Temporais.
