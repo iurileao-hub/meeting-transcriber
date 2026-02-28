@@ -1,10 +1,15 @@
 """Base class for transcription backends."""
 import functools
 import inspect
+import os
+import threading
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
+
+from dotenv import load_dotenv
 
 
 @dataclass
@@ -30,12 +35,33 @@ class TranscriptionBackend(ABC):
     - supports_diarization: Property indicating if backend can identify speakers
     """
 
+    def __init__(self, hf_token: str | None = None):
+        self._hf_token = hf_token
+
+    def _load_hf_token(self) -> str:
+        """Load HuggingFace token from cache, environment, or .env file."""
+        if self._hf_token:
+            return self._hf_token
+        env_file = Path(__file__).parent.parent.parent / ".env"
+        load_dotenv(env_file)
+        token = os.getenv("HF_TOKEN")
+        if not token:
+            raise ValueError(
+                "HuggingFace token not found.\n"
+                "Set HF_TOKEN in .env or pass hf_token parameter.\n"
+                "Get your token at: https://huggingface.co/settings/tokens"
+            )
+        return token
+
     @abstractmethod
     def transcribe(
         self,
         audio_path: str,
         language: str | None = None,
         num_speakers: int | None = None,
+        min_speakers: int | None = None,
+        max_speakers: int | None = None,
+        progress_callback: Callable[[str, float], None] | None = None,
         **kwargs,
     ) -> TranscriptionResult:
         """Transcribe audio file.
@@ -44,6 +70,9 @@ class TranscriptionBackend(ABC):
             audio_path: Path to audio file.
             language: Language code (e.g., 'pt', 'en') or None for auto-detect.
             num_speakers: Expected number of speakers (for diarization).
+            min_speakers: Minimum expected speakers.
+            max_speakers: Maximum expected speakers.
+            progress_callback: Optional callback(stage, percent) for progress.
             **kwargs: Backend-specific options.
 
         Returns:
@@ -68,6 +97,26 @@ class TranscriptionBackend(ABC):
         """Human-readable backend name."""
         return self.__class__.__name__.replace("Backend", "")
 
+    def is_available(self) -> bool:
+        """Check if this backend's dependencies are installed."""
+        return True
+
+    @staticmethod
+    def _build_diarize_kwargs(
+        num_speakers: int | None = None,
+        min_speakers: int | None = None,
+        max_speakers: int | None = None,
+    ) -> dict:
+        """Build kwargs dict for pyannote diarization pipeline."""
+        kwargs: dict[str, int] = {}
+        if num_speakers is not None:
+            kwargs["num_speakers"] = num_speakers
+        if min_speakers is not None:
+            kwargs["min_speakers"] = min_speakers
+        if max_speakers is not None:
+            kwargs["max_speakers"] = max_speakers
+        return kwargs
+
 
 def get_default_device() -> str:
     """Auto-detect the best available processing device.
@@ -90,6 +139,7 @@ def get_default_device() -> str:
     return "cpu"
 
 
+_patch_lock = threading.Lock()
 _hf_compat_applied = False
 
 
@@ -100,46 +150,47 @@ def patch_hf_hub_compat() -> None:
     in favor of 'token'. Since pyannote.audio 3.4.0 still uses the old
     parameter throughout its codebase, this patch translates it transparently.
 
-    Safe to call multiple times — only applies once.
+    Safe to call multiple times — only applies once. Thread-safe.
     """
     global _hf_compat_applied
-    if _hf_compat_applied:
-        return
+    with _patch_lock:
+        if _hf_compat_applied:
+            return
 
-    import huggingface_hub
+        import huggingface_hub
 
-    original = huggingface_hub.hf_hub_download
+        original = huggingface_hub.hf_hub_download
 
-    # Check if patch is needed (use_auth_token still accepted)
-    sig = inspect.signature(original)
-    if "use_auth_token" in sig.parameters:
+        # Check if patch is needed (use_auth_token still accepted)
+        sig = inspect.signature(original)
+        if "use_auth_token" in sig.parameters:
+            _hf_compat_applied = True
+            return
+
+        @functools.wraps(original)
+        def _patched_hf_hub_download(*args, **kwargs):
+            if "use_auth_token" in kwargs:
+                kwargs["token"] = kwargs.pop("use_auth_token")
+            return original(*args, **kwargs)
+
+        # Patch the source module
+        huggingface_hub.hf_hub_download = _patched_hf_hub_download
+
+        # Patch already-imported references in pyannote modules
+        for mod_name in (
+            "pyannote.audio.core.pipeline",
+            "pyannote.audio.core.model",
+        ):
+            try:
+                import sys
+
+                mod = sys.modules.get(mod_name)
+                if mod and hasattr(mod, "hf_hub_download"):
+                    mod.hf_hub_download = _patched_hf_hub_download
+            except Exception:
+                pass
+
         _hf_compat_applied = True
-        return
-
-    @functools.wraps(original)
-    def _patched_hf_hub_download(*args, **kwargs):
-        if "use_auth_token" in kwargs:
-            kwargs["token"] = kwargs.pop("use_auth_token")
-        return original(*args, **kwargs)
-
-    # Patch the source module
-    huggingface_hub.hf_hub_download = _patched_hf_hub_download
-
-    # Patch already-imported references in pyannote modules
-    for mod_name in (
-        "pyannote.audio.core.pipeline",
-        "pyannote.audio.core.model",
-    ):
-        try:
-            import sys
-
-            mod = sys.modules.get(mod_name)
-            if mod and hasattr(mod, "hf_hub_download"):
-                mod.hf_hub_download = _patched_hf_hub_download
-        except Exception:
-            pass
-
-    _hf_compat_applied = True
 
 
 @contextmanager
@@ -313,8 +364,9 @@ class ProgressStreamer:
             self.tokens_generated += value.shape[0]
         else:
             self.tokens_generated += 1
-        pct = (self.tokens_generated / self.max_tokens) * 99
-        self.progress_callback(self.stage_name, min(pct, 99))
+        if self.max_tokens > 0:
+            pct = (self.tokens_generated / self.max_tokens) * 99
+            self.progress_callback(self.stage_name, min(pct, 99))
 
     def end(self) -> None:
         """Called by generate() when generation is complete."""

@@ -69,7 +69,7 @@ class TestWhisperXBackendConfig:
 
 
 class TestWhisperXBackendHFToken:
-    """Test HuggingFace token handling."""
+    """Test HuggingFace token handling (via base class _load_hf_token)."""
 
     def test_custom_hf_token(self):
         backend = WhisperXBackend(hf_token="test_token")
@@ -81,7 +81,7 @@ class TestWhisperXBackendHFToken:
         assert backend._load_hf_token() == "env_token"
 
     @patch.dict("os.environ", {}, clear=True)
-    @patch("src.backends.whisperx_backend.load_dotenv")
+    @patch("src.backends.base.load_dotenv")
     def test_hf_token_missing_raises(self, mock_dotenv):
         backend = WhisperXBackend()
         with pytest.raises(ValueError, match="HuggingFace token not found"):

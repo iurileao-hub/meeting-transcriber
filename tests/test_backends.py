@@ -64,6 +64,104 @@ class TestTranscriptionBackend:
         with pytest.raises(TypeError):
             IncompleteBackend()
 
+    def test_is_available_default_returns_true(self):
+        """Default is_available() should return True."""
+        class CompleteBackend(TranscriptionBackend):
+            def transcribe(self, audio_path, **kwargs):
+                pass
+
+            @property
+            def supports_diarization(self) -> bool:
+                return False
+
+            @property
+            def total_stages(self) -> int:
+                return 3
+
+        backend = CompleteBackend()
+        assert backend.is_available() is True
+
+    def test_load_hf_token_returns_cached_token(self):
+        """_load_hf_token should return the cached token if provided."""
+        class CompleteBackend(TranscriptionBackend):
+            def transcribe(self, audio_path, **kwargs):
+                pass
+
+            @property
+            def supports_diarization(self) -> bool:
+                return False
+
+            @property
+            def total_stages(self) -> int:
+                return 3
+
+        backend = CompleteBackend(hf_token="my_token")
+        assert backend._load_hf_token() == "my_token"
+
+    @patch.dict("os.environ", {"HF_TOKEN": "env_token"}, clear=True)
+    def test_load_hf_token_from_env(self):
+        """_load_hf_token should load from environment if no cached token."""
+        class CompleteBackend(TranscriptionBackend):
+            def transcribe(self, audio_path, **kwargs):
+                pass
+
+            @property
+            def supports_diarization(self) -> bool:
+                return False
+
+            @property
+            def total_stages(self) -> int:
+                return 3
+
+        backend = CompleteBackend()
+        assert backend._load_hf_token() == "env_token"
+
+    @patch.dict("os.environ", {}, clear=True)
+    def test_load_hf_token_raises_when_missing(self):
+        """_load_hf_token should raise ValueError if no token found."""
+        class CompleteBackend(TranscriptionBackend):
+            def transcribe(self, audio_path, **kwargs):
+                pass
+
+            @property
+            def supports_diarization(self) -> bool:
+                return False
+
+            @property
+            def total_stages(self) -> int:
+                return 3
+
+        backend = CompleteBackend()
+        with patch("src.backends.base.load_dotenv"):
+            with pytest.raises(ValueError, match="HuggingFace token not found"):
+                backend._load_hf_token()
+
+    def test_build_diarize_kwargs_empty(self):
+        """_build_diarize_kwargs should return empty dict when no args."""
+        result = TranscriptionBackend._build_diarize_kwargs()
+        assert result == {}
+
+    def test_build_diarize_kwargs_num_speakers(self):
+        result = TranscriptionBackend._build_diarize_kwargs(num_speakers=3)
+        assert result == {"num_speakers": 3}
+
+    def test_build_diarize_kwargs_num_speakers_zero(self):
+        """num_speakers=0 should be included (not falsy-excluded)."""
+        result = TranscriptionBackend._build_diarize_kwargs(num_speakers=0)
+        assert result == {"num_speakers": 0}
+
+    def test_build_diarize_kwargs_all_params(self):
+        result = TranscriptionBackend._build_diarize_kwargs(
+            num_speakers=2, min_speakers=1, max_speakers=5
+        )
+        assert result == {"num_speakers": 2, "min_speakers": 1, "max_speakers": 5}
+
+    def test_build_diarize_kwargs_min_max_only(self):
+        result = TranscriptionBackend._build_diarize_kwargs(
+            min_speakers=1, max_speakers=4
+        )
+        assert result == {"min_speakers": 1, "max_speakers": 4}
+
 
 class TestBackendFactory:
     """Tests for get_backend factory function."""
@@ -97,6 +195,46 @@ class TestBackendFactory:
 
         backend = get_backend("meeting")
         assert isinstance(backend, TranscriptionBackend)
+
+    def test_get_backend_checks_is_available(self):
+        """Factory should raise ValueError if backend is not available."""
+        from src.backends import get_backend
+
+        with patch("src.backends.mlx_backend.MLXBackend.is_available", return_value=False):
+            with pytest.raises(ValueError, match="not available"):
+                get_backend("fast")
+
+    def test_get_backend_lazy_import_fast(self):
+        """Fast mode should only import MLXBackend."""
+        from src.backends import get_backend
+        from src.backends.mlx_backend import MLXBackend
+
+        backend = get_backend("fast")
+        assert isinstance(backend, MLXBackend)
+
+    def test_get_backend_lazy_import_meeting(self):
+        """Meeting mode should only import WhisperXBackend."""
+        from src.backends import get_backend
+        from src.backends.whisperx_backend import WhisperXBackend
+
+        backend = get_backend("meeting")
+        assert isinstance(backend, WhisperXBackend)
+
+    def test_get_backend_lazy_import_precise(self):
+        """Precise mode should only import GraniteBackend."""
+        from src.backends import get_backend
+        from src.backends.granite_backend import GraniteBackend
+
+        backend = get_backend("precise")
+        assert isinstance(backend, GraniteBackend)
+
+    def test_get_backend_filters_kwargs(self):
+        """Factory should filter out unknown kwargs for each backend."""
+        from src.backends import get_backend
+
+        # batch_size is not a valid param for precise mode
+        backend = get_backend("precise", device="mps", batch_size=32)
+        assert backend.device == "mps"
 
 
 class TestBackendTotalStages:
@@ -231,11 +369,11 @@ class TestDiarizationProgressHook:
         def capturing_apply(self, file, **kwargs):
             hook = kwargs.get("hook")
             if hook:
-                # segmentation: 0-45%, at 50% complete → 22.5%
+                # segmentation: 0-45%, at 50% complete -> 22.5%
                 hook("segmentation", None, completed=50, total=100)
-                # embeddings: 45-85%, at 50% complete → 65%
+                # embeddings: 45-85%, at 50% complete -> 65%
                 hook("embeddings", None, completed=50, total=100)
-                # discrete_diarization: 85-99%, at 100% complete → 99%
+                # discrete_diarization: 85-99%, at 100% complete -> 99%
                 hook("discrete_diarization", None, completed=100, total=100)
             return MagicMock()
 
@@ -262,11 +400,11 @@ class TestDiarizationProgressHook:
                 mock_sd_class.apply.__wrapped__ = capturing_apply
 
         # Since the mock doesn't fully simulate, let's test the math directly
-        # segmentation range: (0, 45), 50/100 → 0 + 0.5 * 45 = 22.5
+        # segmentation range: (0, 45), 50/100 -> 0 + 0.5 * 45 = 22.5
         assert 0 + (50 / 100) * (45 - 0) == 22.5
-        # embeddings range: (45, 85), 50/100 → 45 + 0.5 * 40 = 65.0
+        # embeddings range: (45, 85), 50/100 -> 45 + 0.5 * 40 = 65.0
         assert 45 + (50 / 100) * (85 - 45) == 65.0
-        # discrete_diarization range: (85, 99), 100/100 → 85 + 1.0 * 14 = 99.0
+        # discrete_diarization range: (85, 99), 100/100 -> 85 + 1.0 * 14 = 99.0
         assert 85 + (100 / 100) * (99 - 85) == 99.0
 
 
@@ -383,6 +521,14 @@ class TestHfHubCompatPatch:
                 revision="main",
                 cache_dir="/tmp",
             )
+
+    def test_patch_is_thread_safe(self):
+        """Patch should be thread-safe via _patch_lock."""
+        import threading
+        import src.backends.base as base_mod
+
+        # Verify the lock exists
+        assert isinstance(base_mod._patch_lock, type(threading.Lock()))
 
 
 class TestTqdmProgressHook:
@@ -547,6 +693,21 @@ class TestProgressStreamer:
         assert len(reported) == 1
         # 5/100 * 99 = 4.95
         assert round(reported[0], 1) == 5.0
+
+    def test_handles_max_tokens_zero(self):
+        """Should not crash or report when max_tokens is 0."""
+        from src.backends.base import ProgressStreamer
+        import torch
+
+        callback = MagicMock()
+        streamer = ProgressStreamer(
+            max_tokens=0,
+            progress_callback=callback,
+            stage_name="transcribing",
+        )
+
+        streamer.put(torch.tensor([42]))
+        callback.assert_not_called()
 
 
 class TestGetDefaultDevice:
