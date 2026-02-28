@@ -328,3 +328,64 @@ class TestBackendIntegration:
         # Should not raise even with unknown parameter
         backend = get_backend("precise", unknown_param="value")
         assert isinstance(backend, GraniteBackend)
+
+
+class TestGraniteGranularProgress:
+    """Test granular progress in Granite transcription."""
+
+    def test_transcribe_passes_streamer_to_generate(self):
+        """model.generate() should receive a ProgressStreamer."""
+        from src.backends.base import ProgressStreamer
+
+        # Mock all heavy dependencies
+        mock_processor = MagicMock()
+        mock_tokenizer = MagicMock()
+        mock_processor.tokenizer = mock_tokenizer
+        mock_tokenizer.apply_chat_template.return_value = "prompt"
+
+        mock_model = MagicMock()
+        mock_outputs = MagicMock()
+        mock_outputs.__getitem__ = MagicMock(return_value=MagicMock())
+        mock_model.generate.return_value = mock_outputs
+
+        mock_inputs = MagicMock()
+        mock_inputs.__getitem__ = MagicMock(return_value=MagicMock(shape=(1, 10)))
+        mock_inputs.to.return_value = mock_inputs
+        mock_processor.return_value = mock_inputs
+
+        callback = MagicMock()
+
+        with patch("src.backends.granite_backend.AutoProcessor", create=True) as mock_ap, \
+             patch("src.backends.granite_backend.AutoModelForSpeechSeq2Seq", create=True) as mock_am, \
+             patch("src.backends.granite_backend.torch", create=True) as mock_torch, \
+             patch("src.backends.granite_backend.torchaudio", create=True) as mock_ta, \
+             patch("src.backends.granite_backend.whisperx", create=True) as mock_wx, \
+             patch("src.backends.granite_backend.DiarizationPipeline", create=True) as mock_dp, \
+             patch("src.backends.granite_backend.patch_hf_hub_compat"), \
+             patch("src.backends.granite_backend.diarization_progress_hook"):
+
+            mock_ap.from_pretrained.return_value = mock_processor
+            mock_am.from_pretrained.return_value = mock_model
+
+            # Create a mock wav tensor that behaves like a real tensor
+            mock_wav = MagicMock()
+            mock_wav.shape = (1, 16000)  # mono, 1 second at 16kHz
+            mock_wav.abs.return_value.max.return_value = 1.0
+            mock_ta.load.return_value = (mock_wav, 16000)
+
+            mock_torch.no_grad.return_value.__enter__ = MagicMock()
+            mock_torch.no_grad.return_value.__exit__ = MagicMock()
+            mock_torch.float32 = "float32"
+            mock_torch.bfloat16 = "bfloat16"
+
+            backend = GraniteBackend(hf_token="test")
+
+            with patch.object(backend, "is_available", return_value=True), \
+                 patch.object(backend, "_align_transcription_with_diarization",
+                              return_value=[{"start": 0, "end": 1, "text": "t", "speaker": "S0"}]):
+                backend.transcribe("test.wav", progress_callback=callback)
+
+            # Check that generate was called with a streamer kwarg
+            generate_call = mock_model.generate.call_args
+            assert "streamer" in generate_call.kwargs
+            assert isinstance(generate_call.kwargs["streamer"], ProgressStreamer)

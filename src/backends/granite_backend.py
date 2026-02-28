@@ -12,7 +12,25 @@ from .base import (
     TranscriptionResult,
     diarization_progress_hook,
     patch_hf_hub_compat,
+    ProgressStreamer,
 )
+
+try:
+    from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
+    import torch
+    import torchaudio
+except ImportError:
+    AutoProcessor = None  # type: ignore[assignment,misc]
+    AutoModelForSpeechSeq2Seq = None  # type: ignore[assignment,misc]
+    torch = None  # type: ignore[assignment]
+    torchaudio = None  # type: ignore[assignment]
+
+try:
+    from whisperx.diarize import DiarizationPipeline
+    import whisperx
+except ImportError:
+    DiarizationPipeline = None  # type: ignore[assignment,misc]
+    whisperx = None  # type: ignore[assignment]
 
 
 class GraniteBackend(TranscriptionBackend):
@@ -58,11 +76,7 @@ class GraniteBackend(TranscriptionBackend):
         Returns:
             True if transformers can be imported.
         """
-        try:
-            import transformers
-            return True
-        except ImportError:
-            return False
+        return AutoProcessor is not None
 
     def _load_hf_token(self) -> str:
         """Load HuggingFace token from environment."""
@@ -120,10 +134,6 @@ class GraniteBackend(TranscriptionBackend):
                 "transformers not installed.\n"
                 "Install with: pip install transformers accelerate torchaudio"
             )
-
-        from transformers import AutoProcessor, AutoModelForSpeechSeq2Seq
-        import torch
-        import torchaudio
 
         # Stage 1: Load Granite model
         if progress_callback:
@@ -191,13 +201,21 @@ class GraniteBackend(TranscriptionBackend):
         ).to(self.device)
 
         # Generate transcription
-        with torch.no_grad():
-            model_outputs = model.generate(
-                **model_inputs,
-                max_new_tokens=448,
-                do_sample=False,
-                num_beams=1,
+        generate_kwargs = dict(
+            **model_inputs,
+            max_new_tokens=448,
+            do_sample=False,
+            num_beams=1,
+        )
+        if progress_callback:
+            generate_kwargs["streamer"] = ProgressStreamer(
+                max_tokens=448,
+                progress_callback=progress_callback,
+                stage_name="transcribing",
             )
+
+        with torch.no_grad():
+            model_outputs = model.generate(**generate_kwargs)
 
         # Extract only the new tokens (skip input tokens)
         num_input_tokens = model_inputs["input_ids"].shape[-1]
@@ -220,8 +238,6 @@ class GraniteBackend(TranscriptionBackend):
             progress_callback("diarizing", 0)
 
         hf_token = self._load_hf_token()
-        from whisperx.diarize import DiarizationPipeline
-        import whisperx
 
         # Ensure compatibility with newer huggingface_hub versions
         patch_hf_hub_compat()
