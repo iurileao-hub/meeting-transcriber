@@ -215,7 +215,7 @@ python src/transcribe.py reuniao.mp3 --format txt
 | `--output` | `-o` | Onde salvar arquivos | data/transcripts |
 | `--format` | `-f` | Formato de saída (json/txt/md/all) | all |
 | `--mode` | | Modo de transcrição (fast/meeting/precise) | meeting |
-| `--device` | `-d` | Processador (cpu/cuda/mps) | cpu |
+| `--device` | `-d` | Processador (cpu/cuda/mps) | auto (mps/cuda/cpu) |
 | `--notify` | | Notificação macOS ao terminar | desligado |
 | `--vocab` | | Arquivo de vocabulário customizado | - |
 | `--ui-lang` | | Idioma da interface (en/pt) | auto |

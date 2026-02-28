@@ -156,7 +156,7 @@ pytest tests/ -v
 | `--language`, `-l` | Idioma | pt, en, es, etc. | auto |
 | `--num-speakers`, `-n` | Nº exato de speakers | inteiro | auto |
 | `--format`, `-f` | Formato de saída | json, txt, md, all | all |
-| `--device`, `-d` | Dispositivo | cpu, cuda, mps | cpu |
+| `--device`, `-d` | Dispositivo | cpu, cuda, mps | auto (mps/cuda/cpu) |
 | `--verbose`, `-v` | Logs detalhados | flag | false |
 | `--output`, `-o` | Diretório de saída | path | data/transcripts |
 | `--mode` | Modo de transcrição | fast, meeting, precise | meeting |
@@ -232,7 +232,7 @@ seguindo o template em examples/meeting_minutes.md
 - **Não versionar:** Arquivos de áudio, transcrições, modelos baixados
 - **Testar com áudios curtos** (< 5min) durante desenvolvimento
 - **Modelo `small`** para testes rápidos, `large-v3` para produção
-- **Device `cpu`** funciona bem em Apple Silicon
+- **Device** auto-detectado: MPS em Apple Silicon, CUDA com NVIDIA, CPU como fallback
 
 ---
 
@@ -260,7 +260,7 @@ seguindo o template em examples/meeting_minutes.md
 - ✅ Tratamento de erros com mensagens úteis
 - ✅ Otimização de performance (compute_type, batch_size)
 - ✅ Liberação de memória após cada etapa
-- ✅ Testes unitários (211 testes)
+- ✅ Testes unitários (215 testes)
 - ✅ **[Fase 3]** Múltiplos backends (MLX-Whisper, WhisperX, Granite)
 - ✅ **[Fase 3]** Interface bilíngue (en/pt)
 - ✅ **[Fase 3]** Barra de progresso com spinner animado, timer e ETA
@@ -303,6 +303,7 @@ Revisão de código realizada em Janeiro 2026:
 - ✅ Progresso granular para VAD e diarização via monkey-patch do pyannote `Inference.slide`
 - ✅ Progresso granular na transcrição MLX via interceptação do tqdm
 - ✅ Progresso granular na transcrição Granite via BaseStreamer (per-token)
+- ✅ Auto-detecção de GPU (MPS em Apple Silicon, CUDA com NVIDIA, CPU como fallback)
 - ✅ Nova etapa "Detectando fala" (VAD) visível na barra de progresso
 - ✅ Contagem de stages dinâmica via `backend.total_stages` (WhisperX=6, Granite=4, MLX=3)
 
